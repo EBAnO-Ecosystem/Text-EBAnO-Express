@@ -1,0 +1,12 @@
+---
+
+clustering_alg: kmeans
+
+
+
+
+
+kmeans:
+  max_iterations: 300
+  n_init: 20
+  init_type: "random"

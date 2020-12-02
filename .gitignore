@@ -1,0 +1,8 @@
+
+/outputs/20200416_lstm_model_toxic_comment_exp0/
+/outputs/20201117_bert_model_imdb_reviews_exp_0/
+/outputs/20201128_bert_model_ag_news_subset_exp0/
+/saved_models/fine_tuned/20200416_lstm_model_toxic_comment_exp0/
+/saved_models/fine_tuned/20201117_bert_model_imdb_reviews_exp_0/
+/saved_models/fine_tuned/20201128_bert_model_ag_news_subset_exp0/
+/saved_models/pre_trained/bert_en_uncased_L-12_H-768_A-12_3/

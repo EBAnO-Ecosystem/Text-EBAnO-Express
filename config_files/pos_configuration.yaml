@@ -1,0 +1,84 @@
+---
+scheduling:
+  - Adjectives:
+      - Adjectives
+  - Nouns:
+      - Nouns
+  - Verbs:
+      - Verbs
+  - Adverbs, Modals:
+      - Adverbs
+      - Modals
+  - Pronouns, Predeterminers, WH:
+      - Pronouns
+      - WH
+      - Predeterminers
+  - Interjections:
+      - Interjections
+  - Others (Cardinal Numbers, Foreign Words, Symbols):
+      - Cardinal Numbers
+      - Foreign Words
+      - Symbols
+
+
+Adjectives:
+  - JJ
+  - JJS
+  - JJR
+
+Nouns:
+  - NN
+  - NNS
+  - NNP
+  - NNPS
+
+Verbs:
+  - VB
+  - VBD
+  - VBG
+  - VBN
+  - VBP
+  - VBZ
+  - RP
+
+Adverbs:
+  - RB
+  - RBR
+  - RBS
+
+Modals:
+  - MD
+
+Conjunctions:
+  - CC
+  - DT
+  - IN
+  - RP
+  - TO
+
+Pronouns:
+  - POS
+  - PRP
+  - EX
+
+WH:
+  - WDT
+  - WP
+  - WP$
+
+Predeterminers:
+  - PDT
+
+Interjections:
+  - UH
+
+Cardinal Numbers:
+  - CD
+
+Foreign Words:
+  - FW
+
+Symbols:
+  - SYM
+  - LS
+...
