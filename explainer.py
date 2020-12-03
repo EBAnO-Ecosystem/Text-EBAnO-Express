@@ -10,8 +10,8 @@ import datetime
 import json
 
 
-class ExplainerClass:
-    """ Explainer Class.
+class LocalExplainer:
+    """ Local Explainer Class.
 
         Performs a set of local explanations for a given Black-Box model and a set of input texts.
 
@@ -127,6 +127,9 @@ class ExplainerClass:
         return
 
     def fit_transform(self, input_texts, classes_of_interest, flag_pos, flag_sen, flag_mlwe, flag_combinations):
+        """ Fits the explainer with input texts and perform transform methods to create the local explanation reports.
+
+        """
         self.fit(input_texts, classes_of_interest)
 
         self.transform(flag_pos, flag_sen, flag_mlwe, flag_combinations)
@@ -341,6 +344,7 @@ class LocalExplanationReport:
             "nPIRP_class_of_interest": local_explanation.numerical_explanation.nPIRP_class_of_interest,
             "nPIRs": local_explanation.numerical_explanation.nPIRs,
             "nPIRPs": local_explanation.numerical_explanation.nPIRPs,
+            "k": local_explanation.perturbation.feature.k
         }
         return local_explanation_dict
 
@@ -371,6 +375,24 @@ class LocalExplanationReport:
         with open(os.path.join(output_path, report_name), "w") as fp:
             json.dump(explanation_report_dict, fp)
         return
+
+
+# TODO global explainer class
+class GlobalExplainer:
+    def __init__(self):
+        pass
+
+    def fit(self, local_explanations):
+        """ Fits the GlobalExplainer with a list of local explanations"""
+        return
+
+    def transform(self):
+        return
+
+
+class GlobalExplanationReport:
+    def __init__(self):
+        pass
 
 
 

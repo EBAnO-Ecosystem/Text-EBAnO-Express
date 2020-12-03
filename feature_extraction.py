@@ -5,6 +5,7 @@ from typing import List
 from itertools import combinations
 from sklearn.cluster import KMeans
 
+import numpy as np
 import nltk
 import yaml
 import math
@@ -112,7 +113,7 @@ class Feature:
             k (int): (only for MLWE) specifies the K value to which has been performed the k-means, None for POS and SEN
         """
         self.feature_id = feature_id
-        self.feature_type = feature_type
+        self.feature_type = feature_type  # POS , SEN , MLWE
         self.description = description
         self.position_word = position_word
         self.combination = combination
@@ -144,11 +145,7 @@ class Feature:
 
 
 class FeaturesExtractionMethod(ABC):
-    """ Abstract Class: Features Extraction Method.
-
-
-
-    """
+    """ Abstract Class: Features Extraction Method. """
     def __init__(self, raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, model_wrapper, flag_combinations):
         """
         Args:
@@ -404,8 +401,6 @@ class MultiLayerWordEmbeddingFeaturesExtraction(FeaturesExtractionMethod):
                 features = features + combination_features
         return features
 
-
-
     @staticmethod
     def __read_configuration_file():
         """ Reads the Multi-Layer Word Embedding configuration file.
@@ -415,10 +410,6 @@ class MultiLayerWordEmbeddingFeaturesExtraction(FeaturesExtractionMethod):
         with open(r'config_files/mlwe_configuration.yaml') as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
         return config
-
-    @staticmethod
-    def __parse_mlwe_configuration(config):
-        return
 
 
 class EmbeddingUnsupervisedAnalysis(ABC):
@@ -441,6 +432,8 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
     def __init__(self, preprocessed_text, model_wrapper, embedding_matrix, tokens, config, class_of_interest):
         EmbeddingUnsupervisedAnalysis.__init__(self, preprocessed_text, model_wrapper, embedding_matrix, tokens, config)
         self.__parse_kmeans_configuration()
+        if self.standardization is True:
+            self.__standardize_embedding_matrix()
         self.k_max = self.__k_max()
         self.k_clusters = {}
         self.kmeans_info = {}
@@ -518,6 +511,7 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         self.max_iterations = self.config["kmeans"]["max_iterations"]
         self.n_init = self.config["kmeans"]["n_init"]
         self.init_type = self.config["kmeans"]["init_type"]
+        self.standardization = self.config["kmeans"]["standardization"]
         return
 
     def __k_max(self):
@@ -528,10 +522,7 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         return int(math.sqrt(len(self.tokens) + 1))
 
     def __search_most_informative_k_division(self, local_explanations_mlwe):
-        """
-
-
-        """
+        """ Evaluates each k division and finds the most informative one. """
         for local_explanation in local_explanations_mlwe:
             k = local_explanation.perturbation.feature.k
 
@@ -580,5 +571,10 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         min_nPIR = min(nPIRs)
         return max_nPIR - min_nPIR
 
-
+    def __standardize_embedding_matrix(self):
+        mean = np.mean(self.embedding_matrix)
+        st_dev = np.std(self.embedding_matrix)
+        self.embedding_matrix = self.embedding_matrix - mean
+        self.embedding_matrix = self.embedding_matrix / st_dev
+        return
 

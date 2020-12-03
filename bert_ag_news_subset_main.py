@@ -56,9 +56,6 @@ if __name__ == "__main__":
 
     model_wrapper = bert_model_wrapper.BertModelWrapper(model, extractor, tokenizer, label_list=[0, 1, 2, 3], max_seq_len=max_seq_length, clean_function=cleaning_function_bert)
 
-    texts =["This film is very awful. I have never seen such a bad movie.", "I really love this film. It is probably one of my favourite movie of ever.",
-            "The book is very nice. The film instead is not as good as the book. I expected more for this movie."]
-
     texts = ['''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
       leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
       leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
@@ -83,7 +80,7 @@ if __name__ == "__main__":
 
     #print(embeddings)
 
-    exp = explainer.ExplainerClass(model_wrapper, "20201128_bert_model_ag_news_subset_exp0")
+    exp = explainer.LocalExplainer(model_wrapper, "20201128_bert_model_ag_news_subset_exp0")
 
     exp.fit_transform(texts, [-1]*len(texts), True, True, True, True)
 

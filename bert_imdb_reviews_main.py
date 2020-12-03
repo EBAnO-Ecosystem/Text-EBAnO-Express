@@ -51,18 +51,19 @@ if __name__ == "__main__":
     model_wrapper = bert_model_wrapper.BertModelWrapper(model, extractor, tokenizer, label_list=[0, 1], max_seq_len=max_seq_length, clean_function=cleaning_function_bert)
 
     texts =["This film is very awful. I have never seen such a bad movie.", "I really love this film. It is probably one of my favourite movie of ever.",
-            "The book is very nice. The film instead is not as good as the book. I expected more for this movie."]
+            "The book is very nice. The film instead is not as good as the book. I expected more for this movie.",
+            "i really this film . it is probably one of my movie of ever ."]
 
     tokens = tokenizer.tokenize(texts[0])
     print("Tokens: {}".format(tokens))
     word_ids = tokenizer.convert_tokens_to_ids(tokens)
     print("Word Ids: {}".format(word_ids))
 
-    #embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
+    # embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
 
-    #print(embeddings)
+    # print(embeddings)
 
-    exp = explainer.ExplainerClass(model_wrapper, "20201117_bert_model_imdb_reviews_exp_0")
+    exp = explainer.LocalExplainer(model_wrapper, "20201117_bert_model_imdb_reviews_exp_0")
 
     exp.fit_transform(texts, [-1]*len(texts), True, True, True, True)
 

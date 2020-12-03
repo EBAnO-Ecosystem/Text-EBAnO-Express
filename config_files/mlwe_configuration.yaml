@@ -10,3 +10,4 @@ kmeans:
   max_iterations: 300
   n_init: 20
   init_type: "random"
+  standardization: True

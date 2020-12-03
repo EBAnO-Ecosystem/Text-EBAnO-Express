@@ -68,6 +68,7 @@ class PerturbationScores:
 
         if b == float('inf'):
             b = sys.float_info.max
+            print("aaa")
         elif b == float('-inf'):
             b = -sys.float_info.max
 
