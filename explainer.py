@@ -195,19 +195,20 @@ class LocalExplainer:
         explanation_report_execution_time = explanation_report_end_time - explanation_report_start_time
 
         # Create an instance of the LocalExplanationReport class
-        local_explanation_report = LocalExplanationReport(input_id,
-                                                          explanation_report_start_time,
-                                                          explanation_report_execution_time,
-                                                          raw_text,
-                                                          cleaned_text,
-                                                          preprocessed_text,
-                                                          tokens,
-                                                          original_probabilities,
-                                                          original_label,
-                                                          flag_pos, flag_sen, flag_mlwe, flag_combinations)
+        local_explanation_report = LocalExplanationReport()
 
         # Fits the local explanations in the LocalExplanationReport
-        local_explanation_report.fit_local_explanations(local_explanations)
+        local_explanation_report.fit(input_id,
+                                     explanation_report_start_time,
+                                     explanation_report_execution_time,
+                                     raw_text,
+                                     cleaned_text,
+                                     preprocessed_text,
+                                     tokens,
+                                     original_probabilities,
+                                     original_label,
+                                     flag_pos, flag_sen, flag_mlwe, flag_combinations,
+                                     local_explanations)
 
         # Save the LocalExplanationReport as json on disk in the LocalExplanationReport
         local_explanation_report.save_local_explanation_report(local_explanations_folder, input_name)
@@ -290,33 +291,85 @@ class LocalExplainer:
 
 
 class LocalExplanationReport:
-    """ LocalExplanationReport class.
+    """ LocalExplanationReport class.  """
+    def __init__(self):
+        self.report_id = None
+        self.start_time = None,
+        self.execution_time = None
+        self.raw_text = None
+        self.cleaned_text = None
+        self.preprocessed_text = None
+        self.positions_tokens = None
+        self.original_probabilities = None
+        self.original_label = None
+        self.flag_pos = None
+        self.flag_sen = None
+        self.flag_mlwe = None
+        self.flag_combinations = None
+        self.local_explanations = []
+        return
 
-    Creates a local explanation report given a list of local explanations.
-    """
-    def __init__(self, report_id, start_time, execution_time, raw_text, cleaned_text, preprocessed_text, ids_tokens,
-                 original_probabilities, original_label, flag_pos, flag_sen, flag_mlwe, flag_combinations):
+    def fit(self, report_id, start_time, execution_time, raw_text, cleaned_text, preprocessed_text, positions_tokens,
+            original_probabilities, original_label, flag_pos, flag_sen, flag_mlwe, flag_combinations, local_explanations):
         self.report_id = report_id
         self.start_time = start_time,
         self.execution_time = execution_time
         self.raw_text = raw_text
         self.cleaned_text = cleaned_text
         self.preprocessed_text = preprocessed_text
-        self.ids_tokens = ids_tokens
+        self.positions_tokens = positions_tokens
         self.original_probabilities = original_probabilities
         self.original_label = original_label
         self.flag_pos = flag_pos
         self.flag_sen = flag_sen
         self.flag_mlwe = flag_mlwe
         self.flag_combinations = flag_combinations
-        self.local_explanations = []
+        self.local_explanations = local_explanations # List of LocalExplanation
         return
 
-    def fit_local_explanations(self, local_explanations):
-        """ Fits a list of local explanations in the local explanation report.
-        """
-        self.local_explanations = [self.local_explanation_to_dict(local_explanation) for local_explanation in local_explanations]
+    def add_local_explanations(self, local_explanations):
+        self.local_explanations = self.local_explanations + local_explanations
         return
+
+    def save_local_explanation_report(self, output_path, input_name=None):
+        """ Save the local explanation report to disk. """
+
+        if input_name is not None:
+            report_name = "local_explanation_report_{}_{}.json".format(str(input_name), self.report_id)
+        else:
+            report_name = "local_explanation_report_{}.json".format(self.report_id)
+
+        # Convert the local explanation report class into a dictionary
+        explanation_report_dict = self.local_explanation_report_to_dict()
+
+        with open(os.path.join(output_path, report_name), "w") as fp:
+            json.dump(explanation_report_dict, fp)
+        return
+
+    def local_explanation_report_to_dict(self):
+        """ Converts a single local explanation report to dictionary. """
+        metadata = {"report_id": self.report_id,
+                    "start_time": self.start_time,
+                    "execution_time": self.execution_time,
+                    "flag_pos": self.flag_pos,
+                    "flag_sen": self.flag_sen,
+                    "flag_mlwe": self.flag_mlwe,
+                    "flag_combinations": self.flag_combinations,
+                    }
+        input_info = {"raw_text": self.raw_text,
+                      "cleaned_text": self.cleaned_text,
+                      "preprocessed_text": self.preprocessed_text,
+                      "positions_tokens": self.positions_tokens,
+                      "original_probabilities": self.original_probabilities.tolist(),
+                      "original_label": self.original_label}
+
+        local_explanations_dict = [self.local_explanation_to_dict(local_explanation) for local_explanation in
+                                   self.local_explanations]
+
+        local_explanation_report_dict = {"metadata": metadata, "input_info": input_info,
+                                         "local_explanations": local_explanations_dict}
+
+        return local_explanation_report_dict
 
     @staticmethod
     def local_explanation_to_dict(local_explanation):
@@ -328,7 +381,7 @@ class LocalExplanationReport:
             "feature_id": feature.feature_id,
             "feature_type": feature.feature_type,
             "feature_description": feature.description,
-            "position_token": feature.position_word,
+            "positions_tokens": feature.positions_tokens,
             "combination": feature.combination,
             "perturbation_id": perturbation.perturbation_id,
             "perturbation_type": perturbation.perturbation_type,
@@ -348,45 +401,92 @@ class LocalExplanationReport:
         }
         return local_explanation_dict
 
-    def save_local_explanation_report(self, output_path, input_name=None):
-        """ Save the local explanation report to disk. """
-        metadata = {"report_id": self.report_id,
-                    "start_time": self.start_time,
-                    "execution_time": self.execution_time,
-                    "flag_pos": self.flag_pos,
-                    "flag_sen": self.flag_sen,
-                    "flag_mlwe": self.flag_mlwe,
-                    "flag_combinations": self.flag_combinations,
-                    }
-        input_info = {"raw_text": self.raw_text,
-                      "cleaned_text": self.cleaned_text,
-                      "preprocessed_text": self.preprocessed_text,
-                      "position_tokens": self.ids_tokens,
-                      "original_probabilities": self.original_probabilities.tolist(),
-                      "original_label": self.original_label}
-
-        if input_name is not None:
-            report_name = "local_explanation_report_{}_{}.json".format(str(input_name), self.report_id)
-        else:
-            report_name = "local_explanation_report_{}.json".format(self.report_id)
-
-        explanation_report_dict = {"metadata": metadata, "input": input_info, "local_explanations": self.local_explanations}
-
-        with open(os.path.join(output_path, report_name), "w") as fp:
-            json.dump(explanation_report_dict, fp)
+    def fit_local_explanation_report_from_json_file(self, explanation_report_path):
+        with open(explanation_report_path) as explanation_report_json:
+            explanation_report_dict = json.load(explanation_report_json)
+            self.dict_to_local_explanation_report(explanation_report_dict)
         return
 
+    def dict_to_local_explanation_report(self, local_explanation_report_dict):
 
-# TODO global explainer class
+        self.report_id = local_explanation_report_dict["metadata"]["report_id"]
+        self.start_time = local_explanation_report_dict["metadata"]["start_time"]
+        self.execution_time = local_explanation_report_dict["metadata"]["execution_time"]
+        self.flag_pos = local_explanation_report_dict["metadata"]["flag_pos"]
+        self.flag_sen = local_explanation_report_dict["metadata"]["flag_sen"]
+        self.flag_mlwe = local_explanation_report_dict["metadata"]["flag_mlwe"]
+        self.flag_combinations = local_explanation_report_dict["metadata"]["flag_combinations"]
+
+        self.raw_text = local_explanation_report_dict["input_info"]["raw_text"]
+        self.cleaned_text = local_explanation_report_dict["input_info"]["cleaned_text"]
+        self.preprocessed_text = local_explanation_report_dict["input_info"]["preprocessed_text"]
+        self.positions_tokens = local_explanation_report_dict["input_info"]["positions_tokens"]
+        self.original_probabilities = local_explanation_report_dict["input_info"]["original_probabilities"]
+        self.original_label = local_explanation_report_dict["input_info"]["original_label"]
+
+        local_explanation_list = local_explanation_report_dict["local_explanations"]
+        self.local_explanations = [self.dict_to_local_explanation(local_explanation_dict) for local_explanation_dict in local_explanation_list]
+
+        return
+
+    @staticmethod
+    def dict_to_local_explanation(local_explanation_dict):
+        feature = fe.Feature(local_explanation_dict["feature_id"],
+                             local_explanation_dict["feature_type"],
+                             local_explanation_dict["feature_description"],
+                             local_explanation_dict["positions_tokens"],
+                             local_explanation_dict["combination"])
+
+        perturbation = pe.Perturbation(local_explanation_dict["perturbation_id"],
+                                       local_explanation_dict["perturbation_type"],
+                                       local_explanation_dict["perturbed_text"],
+                                       feature)
+
+        numerical_explanation = le.NumericalExplanation(local_explanation_dict["nPIR_original_top_class"],
+                                                        local_explanation_dict["nPIRP_original_top_class"],
+                                                        local_explanation_dict["nPIR_class_of_interest"],
+                                                        local_explanation_dict["nPIRP_class_of_interest"],
+                                                        local_explanation_dict["nPIRs"],
+                                                        local_explanation_dict["nPIRPs"])
+
+        local_explanation = le.LocalExplanation(local_explanation_dict["local_explanation_id"],
+                                                perturbation,
+                                                local_explanation_dict["original_probabilities"],
+                                                local_explanation_dict["perturbed_probabilities"],
+                                                local_explanation_dict["original_top_class"],
+                                                local_explanation_dict["perturbed_top_class"],
+                                                local_explanation_dict["class_of_interest"],
+                                                numerical_explanation)
+        return local_explanation
+
+
 class GlobalExplainer:
-    def __init__(self):
+    def __init__(self, label_list, label_names=None):
+        self.label_list = label_list
+        self.label_names = label_names
+        self.local_explanation_reports = []
         pass
 
-    def fit(self, local_explanations):
-        """ Fits the GlobalExplainer with a list of local explanations"""
+    def fit_from_folder(self, reports_folder_path):
+        for file in os.listdir(reports_folder_path):
+            if file.endswith(".json"):
+                explanation_report_json_path = os.path.join(reports_folder_path, file)
+
+                # instantiate the explanation report
+                local_explanation_report = LocalExplanationReport()
+                local_explanation_report.fit_local_explanation_report_from_json_file(explanation_report_json_path)
+
+                self.local_explanation_reports.append(local_explanation_report)
         return
 
-    def transform(self):
+    def transform(self, flag_pos=False, flag_sen=False, flag_mlwe=False, flag_combinations=True, discarded_tokens=[]):
+        for report in self.local_explanation_reports:
+            print(report.report_id)
+            print(report.raw_text)
+            print("\n")
+        return
+
+    def __check_init_parameters(self):
         return
 
 

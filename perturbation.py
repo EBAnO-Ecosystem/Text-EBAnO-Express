@@ -151,7 +151,7 @@ class RemovalPerturbation(PerturbationMethod):
     def create_perturbed_text(self, tokens, feature):
         """ Create a perturbed version of text by removing the tokens of the feature from the original tokens.  """
         # Create a list of tokens by removing from the original list of tokens the ones belonging the feature
-        perturbed_tokens = {i: tokens[i] for i in range(len(tokens)) if i not in feature.position_word.keys()}
+        perturbed_tokens = {i: tokens[i] for i in range(len(tokens)) if i not in feature.positions_tokens.keys()}
 
         # Construct the sentence by joining the words
         perturbed_text = " ".join([token for token in perturbed_tokens.values()])

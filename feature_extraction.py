@@ -102,20 +102,20 @@ class FeaturesExtractionManager:
 
 class Feature:
     """ Feature Class: a Feature represents a single feature extracted. """
-    def __init__(self, feature_id, feature_type, description, position_word, combination=1, k=None):
+    def __init__(self, feature_id, feature_type, description, positions_tokens, combination=1, k=None):
         """ Feature Initializer.
         Args:
             feature_id (int): feature identifier
             feature_type (str): string containing the feature method type (POS, SEN or MLWE)
             description (str): string containing the description of the feature (e.g., Adjectives, Nouns, Sentence1, Cluster1)
-            position_word (list[]):
+            positions_tokens (list[]):
             combination (int): number of combinations to create the feature (1 if no combination, 2 for pairwise combination)
             k (int): (only for MLWE) specifies the K value to which has been performed the k-means, None for POS and SEN
         """
         self.feature_id = feature_id
         self.feature_type = feature_type  # POS , SEN , MLWE
         self.description = description
-        self.position_word = position_word
+        self.positions_tokens = positions_tokens
         self.combination = combination
         self.k = k
 
@@ -124,7 +124,7 @@ class Feature:
         print("Feature ID: ", self.feature_id)
         print("Feature Extraction Method: ", self.feature_type)
         print("Description: ", self.description)
-        print("Position-Word Tuples: ", self.position_word)
+        print("Position-Token Tuples: ", self.positions_tokens)
         print("Combination: ", self.combination)
         return
 
@@ -140,8 +140,8 @@ class Feature:
         """ Returns: (int) feature description. """
         return self.description
 
-    def get_list_position_word(self):
-        return self.position_word
+    def get_list_positions_tokens(self):
+        return self.positions_tokens
 
 
 class FeaturesExtractionMethod(ABC):
@@ -183,18 +183,18 @@ class FeaturesExtractionMethod(ABC):
             descriptions = [feature.description for feature in list(subset_features)]
             description = self.create_combination_description(descriptions)
 
-            position_word = {k: v for sublist in list(subset_features) for k, v in sublist.position_word.items()}
-            feature = self.fit_combination_feature(feature_id, feature_type, description, position_word, r)
+            positions_tokens = {k: v for sublist in list(subset_features) for k, v in sublist.positions_tokens.items()}
+            feature = self.fit_combination_feature(feature_id, feature_type, description, positions_tokens, r)
             combination_features.append(feature)
             feature_id += 1
         return combination_features
 
     @staticmethod
-    def fit_combination_feature(feature_id, feature_type, description, position_word, combination):
+    def fit_combination_feature(feature_id, feature_type, description, positions_tokens, combination):
         feature = Feature(feature_id,
                           feature_type,
                           description,
-                          position_word,
+                          positions_tokens,
                           combination)
         return feature
 
@@ -254,15 +254,15 @@ class PartsOfSpeechFeaturesExtraction(FeaturesExtractionMethod):
         return features
 
     def fit_feature(self, feature_id, tokens_tags_positions, pos, combination):
-        position_word = {}
+        positions_tokens = {}
         for token_tag_position in tokens_tags_positions:
             if token_tag_position[1] in pos["tags"]:
-                position_word[token_tag_position[2]] = token_tag_position[0]
+                positions_tokens[token_tag_position[2]] = token_tag_position[0]
 
         feature = Feature(feature_id,
                           self.feature_extraction_type,
                           self.create_description(pos["description"]),
-                          position_word,
+                          positions_tokens,
                           combination)
 
         return feature
@@ -351,15 +351,15 @@ class SentencesFeaturesExtraction(FeaturesExtractionMethod):
 
         sentence_tokens = self.model_wrapper.texts_to_tokens([cleaned_sentence])[0]
 
-        position_word = {}
+        positions_tokens = {}
         for token in sentence_tokens:
-            position_word[position_count] = token
+            positions_tokens[position_count] = token
             position_count += 1
 
         feature = Feature(feature_id,
                           self.feature_extraction_type,
                           self.create_description(feature_id),
-                          position_word)
+                          positions_tokens)
 
         return feature, position_count
 
@@ -489,12 +489,12 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         return features
 
     def fit_feature(self, feature_id, cluster, k, combination):
-        position_word = cluster
+        positions_tokens = cluster
 
         feature = Feature(feature_id,
                           self.feature_extraction_type,
                           self.create_description(feature_id),
-                          position_word,
+                          positions_tokens,
                           combination,
                           k)
 
@@ -529,12 +529,12 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
             if k not in self.k_clusters:
                 self.k_clusters[k] = {"features": [local_explanation.perturbation.feature],
                                       "weighted_nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest
-                                                         / len(local_explanation.perturbation.feature.position_word.keys())],
+                                                         / len(local_explanation.perturbation.feature.positions_tokens.keys())],
                                       "k": k}
             else:
                 self.k_clusters[k]["features"].append(local_explanation.perturbation.feature)
                 self.k_clusters[k]["weighted_nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest
-                                                            / len(local_explanation.perturbation.feature.position_word.keys()))
+                                                            / len(local_explanation.perturbation.feature.positions_tokens.keys()))
 
         for k in self.k_clusters:
             self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["weighted_nPIRs"])
