@@ -459,12 +459,73 @@ class LocalExplanationReport:
                                                 numerical_explanation)
         return local_explanation
 
+    def get_most_influential_feature(self, class_of_interest=-1, comb_list=[1, 2]):
+        if comb_list != [1, 2]:
+            local_explanations = self.filter_local_explanations_by_feature_combination(self.local_explanations, comb_list)
+        else:
+            local_explanations = self.local_explanations
+        most_influential_feature = self.filter_local_explanations_by_max_nPIR(local_explanations, class_of_interest)
+        return most_influential_feature
+
+    def get_mlwe_most_influential_feature(self, class_of_interest=-1, comb_list=[1, 2]):
+        mlwe_local_explanations = self.filter_local_explanations_by_feature_type(self.local_explanations, "MLWE")
+        if comb_list != [1, 2]:
+            mlwe_local_explanations = self.filter_local_explanations_by_feature_combination(mlwe_local_explanations, comb_list)
+        most_influential_mlwe_feature = self.filter_local_explanations_by_max_nPIR(mlwe_local_explanations, class_of_interest)
+        return most_influential_mlwe_feature
+
+    def get_sen_most_influential_feature(self, class_of_interest=-1, comb_list=[1, 2]):
+        sen_local_explanations = self.filter_local_explanations_by_feature_type(self.local_explanations, "SEN")
+        if comb_list != [1, 2]:
+            sen_local_explanations = self.filter_local_explanations_by_feature_combination(sen_local_explanations, comb_list)
+        most_influential_sen_feature = self.filter_local_explanations_by_max_nPIR(sen_local_explanations, class_of_interest)
+        return most_influential_sen_feature
+
+    def get_pos_most_influential_feature(self, class_of_interest=-1, comb_list=[1, 2]):
+        pos_local_explanations = self.filter_local_explanations_by_feature_type(self.local_explanations, "POS")
+        if comb_list != [1, 2]:
+            pos_local_explanations = self.filter_local_explanations_by_feature_combination(pos_local_explanations, comb_list)
+        most_influential_pos_feature = self.filter_local_explanations_by_max_nPIR(pos_local_explanations, class_of_interest)
+        return most_influential_pos_feature
+
+    @staticmethod
+    def filter_local_explanations_by_feature_type(local_explanations, feature_type):
+        """ Gets all the """
+        return [local_explanation for local_explanation in local_explanations if local_explanation.perturbation.feature.feature_type == feature_type]
+
+    @staticmethod
+    def filter_local_explanations_by_feature_combination(local_explanations, combination_list=[1, 2]):
+        """ Filters the local_explanation by their feature.combination value. """
+        return [local_explanation for local_explanation in local_explanations if local_explanation.perturbation.feature.combination == any(combination_list)]
+
+    @staticmethod
+    def filter_local_explanations_by_nPIR_range(local_explanations, nPIR_range=[-1, +1], class_of_interest=-1):
+        """ Gets all the """
+        if class_of_interest == -1:
+            filtered_local_explanation = [l_e for l_e in local_explanations if l_e.nPIR_original_top_class >= nPIR_range[0] and l_e.nPIR_original_top_class >= nPIR_range[1]]
+        else:
+            coi = class_of_interest
+            filtered_local_explanation = [l_e for l_e in local_explanations if l_e.nPIRs[coi] >= nPIR_range[0] and l_e.nPIRs[coi] >= nPIR_range[1]]
+        return filtered_local_explanation
+
+    @staticmethod
+    def filter_local_explanations_by_max_nPIR(local_explanations, class_of_interest=-1):
+        """ Gets all the """
+        if class_of_interest == -1:
+            most_influential_feature = max(local_explanations, key=lambda local_explanation: local_explanation.numerical_explanation.nPIR_original_top_class)
+        else:
+            most_influential_feature = max(local_explanations, key=lambda local_explanation: local_explanation.numerical_explanation.nPIRs.class_of_interest)
+        return most_influential_feature
+
 
 class GlobalExplainer:
     def __init__(self, label_list, label_names=None):
         self.label_list = label_list
         self.label_names = label_names
         self.local_explanation_reports = []
+        self.GAI_matrix = {}
+        self.GRI_matrix = {}
+        self.occurences_matrix = {}
         pass
 
     def fit_from_folder(self, reports_folder_path):
@@ -482,9 +543,37 @@ class GlobalExplainer:
     def transform(self, flag_pos=False, flag_sen=False, flag_mlwe=False, flag_combinations=True, discarded_tokens=[]):
         for report in self.local_explanation_reports:
             print(report.report_id)
-            print(report.raw_text)
-            print("\n")
+            most_influential_feature = report.get_most_influential_feature()
+            most_influential_pos_feature = report.get_pos_most_influential_feature()
+            most_influential_sen_feature = report.get_sen_most_influential_feature()
+
+            original_label = report.original_label
+            most_influential_mlwe_feature = report.get_mlwe_most_influential_feature()
+
+            nPIR_most_influential_feature = most_influential_mlwe_feature.numerical_explanation.nPIRs[original_label]
+            tokens_most_influential_feature = list(most_influential_mlwe_feature.perturbation.feature.positions_tokens.values())
+
+            for token in tokens_most_influential_feature:
+                if token not in self.GAI_matrix.keys():
+                    self.GAI_matrix[token] = [0]*len(self.label_list)
+                    self.occurences_matrix[token] = [0]*len(self.label_list)
+                self.GAI_matrix[token][original_label] = self.GAI_matrix[token][original_label] + nPIR_most_influential_feature
+                self.occurences_matrix[token][original_label] = self.occurences_matrix[token][original_label] + 1
+
+        for token, GAIs in self.GAI_matrix.items():
+            self.GRI_matrix[token] = [self.compute_GRI(label, GAIs) for label in range(len(GAIs))]
+
         return
+
+    @staticmethod
+    def compute_GRI(label_id, GAIs):
+        gri = 0
+        for i in range(len(GAIs)):
+            if i != label_id:
+                gri = gri - GAIs[i]
+            else:
+                gri = gri + GAIs[i]
+        return gri
 
     def __check_init_parameters(self):
         return
