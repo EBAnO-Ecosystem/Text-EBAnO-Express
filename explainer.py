@@ -538,10 +538,8 @@ class GlobalExplainer:
         self.label_list = label_list
         self.label_names = label_names
         self.local_explanation_reports = []
-        self.GAI_matrix = {}
-        self.GRI_matrix = {}
-        self.occurences_matrix = {}
-        pass
+
+        return
 
     def fit_from_folder(self, reports_folder_path):
         for file in os.listdir(reports_folder_path):
@@ -555,30 +553,43 @@ class GlobalExplainer:
                 self.local_explanation_reports.append(local_explanation_report)
         return
 
-    def transform(self, flag_pos=False, flag_sen=False, flag_mlwe=False, flag_combinations=True, discarded_tokens=[]):
+    def transform(self, feature_type=any(["MLWE", "POS", "SEN", "ALL"]), skipped_tokens=[]):
+        GAI_matrix = {}
+        GRI_matrix = {}
+        occurency_matrix = {}
+        number_of_reports = len(self.local_explanation_reports)
+
         for report in self.local_explanation_reports:
             print(report.report_id)
-            most_influential_feature = report.get_most_influential_feature()
-            most_influential_pos_feature = report.get_pos_most_influential_feature()
-            most_influential_sen_feature = report.get_sen_most_influential_feature()
+
+            if feature_type == "MLWE":
+                most_influential_feature = report.get_mlwe_most_influential_feature()
+            elif feature_type == "POS":
+                most_influential_feature = report.get_pos_most_influential_feature()
+            elif feature_type == "SEN":
+                most_influential_feature = report.get_sen_most_influential_feature()
+            else:
+                most_influential_feature = report.get_most_influential_feature()
 
             original_label = report.original_label
-            most_influential_mlwe_feature = report.get_mlwe_most_influential_feature()
 
-            nPIR_most_influential_feature = most_influential_mlwe_feature.numerical_explanation.nPIRs[original_label]
-            tokens_most_influential_feature = list(most_influential_mlwe_feature.perturbation.feature.positions_tokens.values())
+            nPIR_most_influential_feature = most_influential_feature.numerical_explanation.nPIRs[original_label]
+            tokens_most_influential_feature = list(most_influential_feature.perturbation.feature.positions_tokens.values())
 
             for token in tokens_most_influential_feature:
-                if token not in self.GAI_matrix.keys():
-                    self.GAI_matrix[token] = [0]*len(self.label_list)
-                    self.occurences_matrix[token] = [0]*len(self.label_list)
-                self.GAI_matrix[token][original_label] = self.GAI_matrix[token][original_label] + nPIR_most_influential_feature
-                self.occurences_matrix[token][original_label] = self.occurences_matrix[token][original_label] + 1
+                if token not in skipped_tokens:
+                    if token not in GAI_matrix.keys():
+                        GAI_matrix[token] = [0]*len(self.label_list)
+                        occurency_matrix[token] = [0]*len(self.label_list)
+                    GAI_matrix[token][original_label] = GAI_matrix[token][original_label] + nPIR_most_influential_feature
+                    occurency_matrix[token][original_label] = occurency_matrix[token][original_label] + 1
 
-        for token, GAIs in self.GAI_matrix.items():
-            self.GRI_matrix[token] = [self.compute_GRI(label, GAIs) for label in range(len(GAIs))]
+        for token, GAIs in GAI_matrix.items():
+            GRI_matrix[token] = [self.compute_GRI(label, GAIs) for label in range(len(GAIs))]
 
-        return
+        global_explanation_report = GlobalExplanationReport()
+        global_explanation_report.fit(self.label_list, self.label_names, number_of_reports, GAI_matrix, GRI_matrix, occurency_matrix)
+        return global_explanation_report
 
     @staticmethod
     def compute_GRI(label_id, GAIs):
@@ -596,9 +607,57 @@ class GlobalExplainer:
 
 class GlobalExplanationReport:
     def __init__(self):
-        pass
+        self.label_list = None
+        self.label_names = None
+        self.number_of_reports = None
+        self.GAI_matrix = None
+        self.GRI_matrix = None
+        self.occurency_matrix = None
+        return
 
+    def fit(self, label_list, label_names, number_of_reports, GAI_matrix, GRI_matrix, occurency_matrix):
+        self.label_list = label_list
+        self.label_names = label_names
+        self.number_of_reports = number_of_reports
+        self.GAI_matrix = GAI_matrix
+        self.GRI_matrix = GRI_matrix
+        self.occurency_matrix = occurency_matrix
+        return
 
+    def global_explanation_report_to_dict(self):
+        global_explanation_dictionary = {
+            "label_list": self.label_list,
+            "label_names": self.label_names,
+            "number_of_reports": self.number_of_reports,
+            "GAI_matrix": self.GAI_matrix,
+            "GRI_matrix": self.GRI_matrix,
+            "occurency_matrix": self.occurency_matrix,
+        }
+        return global_explanation_dictionary
 
+    def dict_to_global_explanation_report(self, global_explanation_dictionary):
+        self.label_list = global_explanation_dictionary["label_list"]
+        self.label_names = global_explanation_dictionary["label_names"]
+        self.number_of_reports = global_explanation_dictionary["number_of_reports"]
+        self.GAI_matrix = global_explanation_dictionary["GAI_matrix"]
+        self.GRI_matrix = global_explanation_dictionary["GRI_matrix"]
+        self.occurency_matrix = global_explanation_dictionary["occurency_matrix"]
+        return
+
+    def save_global_explanation_report(self, output_path, input_name=None):
+        ts = time.time()
+        timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d_%H%M%S')
+
+        if input_name is not None:
+            report_name = "global_explanation_report_{}_{}.json".format(str(input_name), timestamp)
+        else:
+            report_name = "global_explanation_report_{}.json".format(timestamp)
+
+        # Convert the global explanation report class into a dictionary
+        global_explanation_report_dict = self.global_explanation_report_to_dict()
+
+        with open(os.path.join(output_path, report_name), "w") as fp:
+            json.dump(global_explanation_report_dict, fp)
+        return
 
 
