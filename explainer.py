@@ -2,6 +2,7 @@ import feature_extraction as fe
 import perturbation as pe
 import local_explanation as le
 from typing import List
+from nltk.stem import WordNetLemmatizer
 
 import yaml
 import os
@@ -554,13 +555,17 @@ class GlobalExplainer:
         return
 
     def transform(self, feature_type=any(["MLWE", "POS", "SEN", "ALL"]), skipped_tokens=[]):
-        GAI_matrix = {}
-        GRI_matrix = {}
-        occurency_matrix = {}
+        GAI_token_matrix = {}
+        GAI_lemma_matrix = {}
+        GRI_token_matrix = {}
+        GRI_lemma_matrix = {}
+        token_occurency_matrix = {}
+        lemma_occurency_matrix = {}
         number_of_reports = len(self.local_explanation_reports)
 
+        lemmatizer = WordNetLemmatizer()
+
         for report in self.local_explanation_reports:
-            print(report.report_id)
 
             if feature_type == "MLWE":
                 most_influential_feature = report.get_mlwe_most_influential_feature()
@@ -578,17 +583,28 @@ class GlobalExplainer:
 
             for token in tokens_most_influential_feature:
                 if token not in skipped_tokens:
-                    if token not in GAI_matrix.keys():
-                        GAI_matrix[token] = [0]*len(self.label_list)
-                        occurency_matrix[token] = [0]*len(self.label_list)
-                    GAI_matrix[token][original_label] = GAI_matrix[token][original_label] + nPIR_most_influential_feature
-                    occurency_matrix[token][original_label] = occurency_matrix[token][original_label] + 1
+                    if token not in GAI_token_matrix.keys():
+                        GAI_token_matrix[token] = [0]*len(self.label_list)
+                        token_occurency_matrix[token] = [0]*len(self.label_list)
+                    GAI_token_matrix[token][original_label] = GAI_token_matrix[token][original_label] + nPIR_most_influential_feature
+                    token_occurency_matrix[token][original_label] = token_occurency_matrix[token][original_label] + 1
 
-        for token, GAIs in GAI_matrix.items():
-            GRI_matrix[token] = [self.compute_GRI(label, GAIs) for label in range(len(GAIs))]
+                    lemma = lemmatizer.lemmatize(token)
+                    if lemma not in GAI_lemma_matrix.keys():
+                        GAI_lemma_matrix[lemma] = [0]*len(self.label_list)
+                        lemma_occurency_matrix[lemma] = [0]*len(self.label_list)
+                    GAI_lemma_matrix[lemma][original_label] = GAI_lemma_matrix[lemma][original_label] + nPIR_most_influential_feature
+                    lemma_occurency_matrix[lemma][original_label] = lemma_occurency_matrix[lemma][original_label] + 1
+
+        for token, GAIs in GAI_token_matrix.items():
+            GRI_token_matrix[token] = [max(self.compute_GRI(label, GAIs), 0) for label in range(len(GAIs))]
+
+        for lemma, GAIs in GAI_lemma_matrix.items():
+            GRI_lemma_matrix[lemma] = [max(self.compute_GRI(label, GAIs), 0) for label in range(len(GAIs))]
 
         global_explanation_report = GlobalExplanationReport()
-        global_explanation_report.fit(self.label_list, self.label_names, number_of_reports, GAI_matrix, GRI_matrix, occurency_matrix)
+        global_explanation_report.fit(self.label_list, self.label_names, number_of_reports, GAI_token_matrix, GRI_token_matrix, token_occurency_matrix,
+                                      GAI_lemma_matrix, GRI_lemma_matrix, lemma_occurency_matrix)
         return global_explanation_report
 
     @staticmethod
@@ -610,18 +626,25 @@ class GlobalExplanationReport:
         self.label_list = None
         self.label_names = None
         self.number_of_reports = None
-        self.GAI_matrix = None
-        self.GRI_matrix = None
-        self.occurency_matrix = None
+        self.GAI_token_matrix = None
+        self.GAI_lemma_matrix = None
+        self.GRI_token_matrix = None
+        self.GRI_lemma_matrix = None
+        self.token_occurency_matrix = None
+        self.lemma_occurency_matrix = None
         return
 
-    def fit(self, label_list, label_names, number_of_reports, GAI_matrix, GRI_matrix, occurency_matrix):
+    def fit(self, label_list, label_names, number_of_reports, GAI_token_matrix, GRI_token_matrix, token_occurency_matrix,
+            GAI_lemma_matrix, GRI_lemma_matrix, lemma_occurency_matrix):
         self.label_list = label_list
         self.label_names = label_names
         self.number_of_reports = number_of_reports
-        self.GAI_matrix = GAI_matrix
-        self.GRI_matrix = GRI_matrix
-        self.occurency_matrix = occurency_matrix
+        self.GAI_token_matrix = GAI_token_matrix
+        self.GAI_lemma_matrix = GAI_lemma_matrix
+        self.GRI_token_matrix = GRI_token_matrix
+        self.GRI_lemma_matrix = GRI_lemma_matrix
+        self.token_occurency_matrix = token_occurency_matrix
+        self.lemma_occurency_matrix = lemma_occurency_matrix
         return
 
     def global_explanation_report_to_dict(self):
@@ -629,9 +652,12 @@ class GlobalExplanationReport:
             "label_list": self.label_list,
             "label_names": self.label_names,
             "number_of_reports": self.number_of_reports,
-            "GAI_matrix": self.GAI_matrix,
-            "GRI_matrix": self.GRI_matrix,
-            "occurency_matrix": self.occurency_matrix,
+            "GAI_token_matrix": self.GAI_token_matrix,
+            "GAI_lemma_matrix": self.GAI_lemma_matrix,
+            "GRI_token_matrix": self.GRI_token_matrix,
+            "GRI_lemma_matrix": self.GRI_lemma_matrix,
+            "token_occurency_matrix": self.token_occurency_matrix,
+            "lemma_occurency_matrix": self.lemma_occurency_matrix,
         }
         return global_explanation_dictionary
 
@@ -639,9 +665,12 @@ class GlobalExplanationReport:
         self.label_list = global_explanation_dictionary["label_list"]
         self.label_names = global_explanation_dictionary["label_names"]
         self.number_of_reports = global_explanation_dictionary["number_of_reports"]
-        self.GAI_matrix = global_explanation_dictionary["GAI_matrix"]
-        self.GRI_matrix = global_explanation_dictionary["GRI_matrix"]
-        self.occurency_matrix = global_explanation_dictionary["occurency_matrix"]
+        self.GAI_token_matrix = global_explanation_dictionary["GAI_token_matrix"]
+        self.GAI_lemma_matrix = global_explanation_dictionary["GAI_lemma_matrix"]
+        self.GRI_token_matrix = global_explanation_dictionary["GRI_token_matrix"]
+        self.GRI_lemma_matrix = global_explanation_dictionary["GRI_lemma_matrix"]
+        self.token_occurency_matrix = global_explanation_dictionary["token_occurency_matrix"]
+        self.lemma_occurency_matrix = global_explanation_dictionary["lemma_occurency_matrix"]
         return
 
     def save_global_explanation_report(self, output_path, input_name=None):
