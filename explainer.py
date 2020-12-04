@@ -33,9 +33,10 @@ class LocalExplainer:
         self.classes_of_interest = None
         self.word_index = None
         self.index_word = None
+        self.expected_labels = None
         self.input_names = None
 
-    def fit(self, input_texts:  List[str], classes_of_interest: List[int], input_names: List[any] = None):
+    def fit(self, input_texts:  List[str], classes_of_interest: List[int], expected_labels: List[int] = None, input_names: List[any] = None):
         """ Fits the explainer with a list of input texts to be explained.
 
         The number of elements in `input_texts` and `classes_of_interests` must be equal.
@@ -51,6 +52,7 @@ class LocalExplainer:
                                      a local explanation report.
             classes_of_interest (List[int]): Fits the explainer with the list of classes of interest (-1 implies that the
                                              class of interest is the label with higher probabilities in the original prediction).
+            expected_labels
             input_names (List[str])[Optional]: Fits the explainer with a list of names (one for each input). If passed, this information will
                                                be used to compose the local explanation report name.
         Raises:
@@ -59,11 +61,17 @@ class LocalExplainer:
             ValueError: if `input_names` is not a list of integers (if passed as parameter)
             ValueError: if `len(input_texts)` and `len(classes_of_interest)` are not equal
         """
-        self.__check_fit_parameters(input_texts, classes_of_interest, input_names)  # Check parameters of fit method
+        self.__check_fit_parameters(input_texts, classes_of_interest, expected_labels, input_names)  # Check parameters of fit method
         if input_names is None:
             self.input_names = [None]*len(input_texts)
         else:
             self.input_names = input_names
+
+        if expected_labels is None:
+            self.expected_labels = [None]*len(input_texts)
+        else:
+            self.expected_labels = expected_labels
+
         self.raw_texts = input_texts  # List[str] containing the original raw input texts
         self.classes_of_interest = classes_of_interest  # List[int] containing the class_of_interest for the explanation of each input
         self.cleaned_texts = [self.model_wrapper.clean_function(text) for text in input_texts]  # List[str] Clean each input with the clean_function specified in the model_wrapper
@@ -110,8 +118,8 @@ class LocalExplainer:
 
         input_id = 0
         # Loop over each input text to perform the explanation
-        for raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, embedding_tensor, input_name in \
-                zip(self.raw_texts, self.cleaned_texts, self.preprocessed_texts, self.tokens_list, self.classes_of_interest, embedding_tensors, self.input_names):
+        for raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, embedding_tensor, expected_label, input_name in \
+                zip(self.raw_texts, self.cleaned_texts, self.preprocessed_texts, self.tokens_list, self.classes_of_interest, embedding_tensors, self.expected_labels, self.input_names):
             self.__perform_local_explanation_single_input_text(input_id,  # Will fill the report id number
                                                                raw_text,
                                                                cleaned_text,
@@ -121,23 +129,24 @@ class LocalExplainer:
                                                                embedding_tensor,
                                                                flag_pos, flag_sen, flag_mlwe, flag_combinations,
                                                                local_explanations_folder,
+                                                               expected_label,
                                                                input_name)
             input_id += 1
 
         return
 
-    def fit_transform(self, input_texts, classes_of_interest, flag_pos, flag_sen, flag_mlwe, flag_combinations):
+    def fit_transform(self, input_texts, classes_of_interest, expected_labels, flag_pos, flag_sen, flag_mlwe, flag_combinations):
         """ Fits the explainer with input texts and perform transform methods to create the local explanation reports.
 
         """
-        self.fit(input_texts, classes_of_interest)
+        self.fit(input_texts, classes_of_interest, expected_labels)
 
         self.transform(flag_pos, flag_sen, flag_mlwe, flag_combinations)
         return
 
     def __perform_local_explanation_single_input_text(self, input_id, raw_text, cleaned_text, preprocessed_text, tokens,
                                                       class_of_interest, embedding_tensor,
-                                                      flag_pos, flag_sen, flag_mlwe, flag_combinations, local_explanations_folder, input_name):
+                                                      flag_pos, flag_sen, flag_mlwe, flag_combinations, local_explanations_folder, expected_label, input_name):
         """ Performs and saves the local explanation for a single input text.
 
         Given a single input and a class of interest, it performs the explanation process:
@@ -207,6 +216,7 @@ class LocalExplainer:
                                      tokens,
                                      original_probabilities,
                                      original_label,
+                                     expected_label,
                                      flag_pos, flag_sen, flag_mlwe, flag_combinations,
                                      local_explanations)
 
@@ -256,7 +266,7 @@ class LocalExplainer:
         return base_experiment_folder, local_explanations_folder
 
     @staticmethod
-    def __check_fit_parameters(input_texts, classes_of_interest, input_names):
+    def __check_fit_parameters(input_texts, classes_of_interest, expected_labels, input_names):
         if not isinstance(input_texts, list):
             raise ValueError("The parameter 'raw_text_list' must be of type: list")
         if any(not isinstance(text, str) for text in input_texts):
@@ -274,6 +284,7 @@ class LocalExplainer:
         else:
             if not len(input_texts) == len(classes_of_interest):
                 raise ValueError("The parameters 'input_names', 'classes_of_interest'  must have all the same length")
+
         return
 
     @staticmethod
@@ -302,6 +313,7 @@ class LocalExplanationReport:
         self.positions_tokens = None
         self.original_probabilities = None
         self.original_label = None
+        self.expected_label = None
         self.flag_pos = None
         self.flag_sen = None
         self.flag_mlwe = None
@@ -310,7 +322,7 @@ class LocalExplanationReport:
         return
 
     def fit(self, report_id, start_time, execution_time, raw_text, cleaned_text, preprocessed_text, positions_tokens,
-            original_probabilities, original_label, flag_pos, flag_sen, flag_mlwe, flag_combinations, local_explanations):
+            original_probabilities, original_label, expected_label, flag_pos, flag_sen, flag_mlwe, flag_combinations, local_explanations):
         self.report_id = report_id
         self.start_time = start_time,
         self.execution_time = execution_time
@@ -320,6 +332,7 @@ class LocalExplanationReport:
         self.positions_tokens = positions_tokens
         self.original_probabilities = original_probabilities
         self.original_label = original_label
+        self.expected_label = expected_label
         self.flag_pos = flag_pos
         self.flag_sen = flag_sen
         self.flag_mlwe = flag_mlwe
@@ -361,7 +374,8 @@ class LocalExplanationReport:
                       "preprocessed_text": self.preprocessed_text,
                       "positions_tokens": self.positions_tokens,
                       "original_probabilities": self.original_probabilities.tolist(),
-                      "original_label": self.original_label}
+                      "original_label": self.original_label,
+                      "expected_label": self.expected_label}
 
         local_explanations_dict = [self.local_explanation_to_dict(local_explanation) for local_explanation in
                                    self.local_explanations]
@@ -423,6 +437,7 @@ class LocalExplanationReport:
         self.positions_tokens = local_explanation_report_dict["input_info"]["positions_tokens"]
         self.original_probabilities = local_explanation_report_dict["input_info"]["original_probabilities"]
         self.original_label = local_explanation_report_dict["input_info"]["original_label"]
+        self.expected_label = local_explanation_report_dict["input_info"]["expected_label"]
 
         local_explanation_list = local_explanation_report_dict["local_explanations"]
         self.local_explanations = [self.dict_to_local_explanation(local_explanation_dict) for local_explanation_dict in local_explanation_list]

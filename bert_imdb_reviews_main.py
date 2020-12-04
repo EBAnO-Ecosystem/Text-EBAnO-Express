@@ -65,7 +65,13 @@ if __name__ == "__main__":
 
     exp = explainer.LocalExplainer(model_wrapper, "20201117_bert_model_imdb_reviews_exp_0")
 
-    exp.fit_transform(texts, [-1]*len(texts), True, True, True, True)
+    exp.fit_transform(input_texts=texts,
+                      classes_of_interest=[-1]*len(texts),
+                      expected_labels=None,
+                      flag_pos=True,
+                      flag_sen=True,
+                      flag_mlwe=True,
+                      flag_combinations=True)
 
 
 
