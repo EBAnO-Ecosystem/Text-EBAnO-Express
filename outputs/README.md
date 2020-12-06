@@ -1,7 +1,7 @@
 Add here one folder for each model to be explained.
 
 Example:
-
+```bash
 outputs
     |
     |---- 20201117_bert_model_imdb_reviews_exp_0
