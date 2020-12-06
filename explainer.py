@@ -53,7 +53,7 @@ class LocalExplainer:
                                      a local explanation report.
             classes_of_interest (List[int]): Fits the explainer with the list of classes of interest (-1 implies that the
                                              class of interest is the label with higher probabilities in the original prediction).
-            expected_labels
+            expected_labels (List[int])[Optional]: Fits the explainer with the list of true expected labels (one for each input text).
             input_names (List[str])[Optional]: Fits the explainer with a list of names (one for each input). If passed, this information will
                                                be used to compose the local explanation report name.
         Raises:
@@ -77,7 +77,7 @@ class LocalExplainer:
         self.classes_of_interest = classes_of_interest  # List[int] containing the class_of_interest for the explanation of each input
         self.cleaned_texts = [self.model_wrapper.clean_function(text) for text in input_texts]  # List[str] Clean each input with the clean_function specified in the model_wrapper
         self.sequences = self.model_wrapper.texts_to_sequences(input_texts)  # List[List[int]] list of sequences ids (one sequence of ids for each input text)
-        self.tokens_list = self.model_wrapper.texts_to_tokens(input_texts)  # List[List[str]] list of sequences tokens (one sequence of tokens for each input text)
+        self.tokens_list = self.model_wrapper.texts_to_tokens(self.cleaned_texts)  # List[List[str]] list of sequences tokens (one sequence of tokens for each input text)
         self.preprocessed_texts = self.model_wrapper.sequences_to_texts(self.sequences)  # List[str] list of texts by joining each sequence of tokens
         return
 
@@ -89,11 +89,11 @@ class LocalExplainer:
         based on the boolean parameters passed.
 
         Args:
-            flag_pos (bool): True if want perform Part-of-Speech Feature Extraction, False otherwise
-            flag_sen (bool): True if want perform Sentence Feature Extraction, False otherwise
-            flag_mlwe (bool): True if want perform Multi-Layer Word Embedding Feature Extraction, False otherwise
-            flag_combinations (bool): True if want perform (pairwise) combinations of features, False otherwise
-            output_folder (str)[Optional]: folder where save the outputs, the default folder is specified in the config.yaml file
+            flag_pos (bool): True if want perform Part-of-Speech Feature Extraction, False otherwise.
+            flag_sen (bool): True if want perform Sentence Feature Extraction, False otherwise.
+            flag_mlwe (bool): True if want perform Multi-Layer Word Embedding Feature Extraction, False otherwise.
+            flag_combinations (bool): True if want perform (pairwise) combinations of features, False otherwise.
+            output_folder (str)[Optional]: folder where save the outputs, the default folder is specified in the config.yaml file.
         Raises:
             ValueError: (flag_pos or flag_sen or flag_mlwe o flag_combinations) is not bool
         """
@@ -121,6 +121,8 @@ class LocalExplainer:
         # Loop over each input text to perform the explanation
         for raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, embedding_tensor, expected_label, input_name in \
                 zip(self.raw_texts, self.cleaned_texts, self.preprocessed_texts, self.tokens_list, self.classes_of_interest, embedding_tensors, self.expected_labels, self.input_names):
+
+            print("INFO: Explaining text {}/{} ".format(input_id+1, len(self.raw_texts)))
             self.__perform_local_explanation_single_input_text(input_id,  # Will fill the report id number
                                                                raw_text,
                                                                cleaned_text,
@@ -172,6 +174,7 @@ class LocalExplainer:
                                                                    flag_mlwe=flag_mlwe,  # True if want apply MLWE feature extraction
                                                                    flag_combinations=flag_combinations)  # True for apply pairwise combination of features
 
+        print("\tINFO: Feature Extraction Phase")
         # Extract the features from the input text
         features_extraction_manager.execute_feature_extraction_phase()
 
@@ -185,6 +188,7 @@ class LocalExplainer:
                                                       features,  # List of features to which apply the perturbation
                                                       flag_removal=True)  # True if want apply Removal perturbation
 
+        print("\tINFO: Perturbation Phase")
         # Perturb the features
         perturbation_manager.execute_perturbation_phase()
 
@@ -197,6 +201,7 @@ class LocalExplainer:
                                                                class_of_interest,  # Class of interest for the current input
                                                                perturbations)  # List of Perturbations to which produce the local explanation
 
+        print("\tINFO: Local Explanation Phase")
         # Produce the local explanation for each perturbation applied
         local_explanations, original_probabilities, original_label = local_explanation_manager.execute_local_explanation_phase()
 
@@ -215,7 +220,7 @@ class LocalExplainer:
                                      cleaned_text,
                                      preprocessed_text,
                                      tokens,
-                                     original_probabilities,
+                                     original_probabilities.tolist(),
                                      original_label,
                                      expected_label,
                                      flag_pos, flag_sen, flag_mlwe, flag_combinations,
@@ -338,7 +343,7 @@ class LocalExplanationReport:
         self.flag_sen = flag_sen
         self.flag_mlwe = flag_mlwe
         self.flag_combinations = flag_combinations
-        self.local_explanations = local_explanations # List of LocalExplanation
+        self.local_explanations = local_explanations  # List of LocalExplanation
         return
 
     def add_local_explanations(self, local_explanations):
@@ -360,8 +365,7 @@ class LocalExplanationReport:
             json.dump(explanation_report_dict, fp)
         return
 
-    def local_explanation_report_to_dict(self):
-        """ Converts a single local explanation report to dictionary. """
+    def local_explanation_report_metadata_to_dict(self):
         metadata = {"report_id": self.report_id,
                     "start_time": self.start_time,
                     "execution_time": self.execution_time,
@@ -370,15 +374,26 @@ class LocalExplanationReport:
                     "flag_mlwe": self.flag_mlwe,
                     "flag_combinations": self.flag_combinations,
                     }
+        return metadata
+
+    def local_explanation_report_input_info_to_dict(self):
         input_info = {"raw_text": self.raw_text,
                       "cleaned_text": self.cleaned_text,
                       "preprocessed_text": self.preprocessed_text,
                       "positions_tokens": self.positions_tokens,
-                      "original_probabilities": self.original_probabilities.tolist(),
+                      "original_probabilities": self.original_probabilities,
                       "original_label": self.original_label,
-                      "expected_label": self.expected_label}
+                      "expected_label": self.expected_label
+                      }
+        return input_info
 
-        local_explanations_dict = [self.local_explanation_to_dict(local_explanation) for local_explanation in
+    def local_explanation_report_to_dict(self):
+        """ Converts a single local explanation report to dictionary. """
+        metadata = self.local_explanation_report_metadata_to_dict()
+
+        input_info = self.local_explanation_report_input_info_to_dict()
+
+        local_explanations_dict = [local_explanation.local_explanation_to_dict() for local_explanation in
                                    self.local_explanations]
 
         local_explanation_report_dict = {"metadata": metadata, "input_info": input_info,
@@ -386,43 +401,13 @@ class LocalExplanationReport:
 
         return local_explanation_report_dict
 
-    @staticmethod
-    def local_explanation_to_dict(local_explanation):
-        """ Converts a single local explanation into dictionary. """
-        perturbation = local_explanation.perturbation
-        feature = perturbation.feature
-        local_explanation_dict = {
-            "local_explanation_id": local_explanation.local_explanation_id,
-            "feature_id": feature.feature_id,
-            "feature_type": feature.feature_type,
-            "feature_description": feature.description,
-            "positions_tokens": feature.positions_tokens,
-            "combination": feature.combination,
-            "perturbation_id": perturbation.perturbation_id,
-            "perturbation_type": perturbation.perturbation_type,
-            "perturbed_text": perturbation.perturbed_text,
-            "original_probabilities": local_explanation.original_probabilities.tolist(),
-            "perturbed_probabilities": local_explanation.perturbed_probabilities.tolist(),
-            "original_top_class": local_explanation.original_top_class,
-            "perturbed_top_class": local_explanation.perturbed_top_class,
-            "class_of_interest": local_explanation.class_of_interest,
-            "nPIR_original_top_class": local_explanation.numerical_explanation.nPIR_original_top_class,
-            "nPIRP_original_top_class": local_explanation.numerical_explanation.nPIRP_original_top_class,
-            "nPIR_class_of_interest": local_explanation.numerical_explanation.nPIR_class_of_interest,
-            "nPIRP_class_of_interest": local_explanation.numerical_explanation.nPIRP_class_of_interest,
-            "nPIRs": local_explanation.numerical_explanation.nPIRs,
-            "nPIRPs": local_explanation.numerical_explanation.nPIRPs,
-            "k": local_explanation.perturbation.feature.k
-        }
-        return local_explanation_dict
-
     def fit_local_explanation_report_from_json_file(self, explanation_report_path):
         with open(explanation_report_path) as explanation_report_json:
             explanation_report_dict = json.load(explanation_report_json)
-            self.dict_to_local_explanation_report(explanation_report_dict)
+            self.fit_local_explanation_report_from_dict(explanation_report_dict)
         return
 
-    def dict_to_local_explanation_report(self, local_explanation_report_dict):
+    def fit_local_explanation_report_from_dict(self, local_explanation_report_dict):
 
         self.report_id = local_explanation_report_dict["metadata"]["report_id"]
         self.start_time = local_explanation_report_dict["metadata"]["start_time"]
@@ -441,38 +426,14 @@ class LocalExplanationReport:
         self.expected_label = local_explanation_report_dict["input_info"]["expected_label"]
 
         local_explanation_list = local_explanation_report_dict["local_explanations"]
-        self.local_explanations = [self.dict_to_local_explanation(local_explanation_dict) for local_explanation_dict in local_explanation_list]
-
+        self.local_explanations = [self.create_local_explanation_from_dict(local_explanation_dict) for local_explanation_dict in local_explanation_list]
+        print("\n")
         return
 
     @staticmethod
-    def dict_to_local_explanation(local_explanation_dict):
-        feature = fe.Feature(local_explanation_dict["feature_id"],
-                             local_explanation_dict["feature_type"],
-                             local_explanation_dict["feature_description"],
-                             local_explanation_dict["positions_tokens"],
-                             local_explanation_dict["combination"])
-
-        perturbation = pe.Perturbation(local_explanation_dict["perturbation_id"],
-                                       local_explanation_dict["perturbation_type"],
-                                       local_explanation_dict["perturbed_text"],
-                                       feature)
-
-        numerical_explanation = le.NumericalExplanation(local_explanation_dict["nPIR_original_top_class"],
-                                                        local_explanation_dict["nPIRP_original_top_class"],
-                                                        local_explanation_dict["nPIR_class_of_interest"],
-                                                        local_explanation_dict["nPIRP_class_of_interest"],
-                                                        local_explanation_dict["nPIRs"],
-                                                        local_explanation_dict["nPIRPs"])
-
-        local_explanation = le.LocalExplanation(local_explanation_dict["local_explanation_id"],
-                                                perturbation,
-                                                local_explanation_dict["original_probabilities"],
-                                                local_explanation_dict["perturbed_probabilities"],
-                                                local_explanation_dict["original_top_class"],
-                                                local_explanation_dict["perturbed_top_class"],
-                                                local_explanation_dict["class_of_interest"],
-                                                numerical_explanation)
+    def create_local_explanation_from_dict(local_explanation_dict):
+        local_explanation = le.LocalExplanation()
+        local_explanation.fit_from_dict(local_explanation_dict)
         return local_explanation
 
     def get_most_influential_feature(self, class_of_interest=-1, comb_list=[1, 2]):
@@ -561,25 +522,35 @@ class GlobalExplainer:
         GRI_lemma_matrix = {}
         token_occurency_matrix = {}
         lemma_occurency_matrix = {}
+        token_indices_input_reports_info = {}  # {"token":List[int] (indices)}
+        lemma_indices_input_reports_info = {}
+        input_reports_info = []  # [ { "metadata", "input_info", "most_informative_local_explanation"} ]
+
         number_of_reports = len(self.local_explanation_reports)
 
         lemmatizer = WordNetLemmatizer()
+        report_index = 0
+        for local_explanation_report in self.local_explanation_reports:
 
-        for report in self.local_explanation_reports:
+            metadata = local_explanation_report.local_explanation_report_metadata_to_dict()
+            input_info = local_explanation_report.local_explanation_report_input_info_to_dict()
 
             if feature_type == "MLWE":
-                most_influential_feature = report.get_mlwe_most_influential_feature()
+                most_influential_feature = local_explanation_report.get_mlwe_most_influential_feature()
             elif feature_type == "POS":
-                most_influential_feature = report.get_pos_most_influential_feature()
+                most_influential_feature = local_explanation_report.get_pos_most_influential_feature()
             elif feature_type == "SEN":
-                most_influential_feature = report.get_sen_most_influential_feature()
+                most_influential_feature = local_explanation_report.get_sen_most_influential_feature()
             else:
-                most_influential_feature = report.get_most_influential_feature()
+                most_influential_feature = local_explanation_report.get_most_influential_feature()
 
-            original_label = report.original_label
+            original_label = local_explanation_report.original_label
 
             nPIR_most_influential_feature = most_influential_feature.numerical_explanation.nPIRs[original_label]
             tokens_most_influential_feature = list(most_influential_feature.perturbation.feature.positions_tokens.values())
+
+            input_report_info = {"metadata": metadata, "input_info": input_info, "most_informative_local_explanation": most_influential_feature}
+            input_reports_info.append(input_report_info)
 
             for token in tokens_most_influential_feature:
                 if token not in skipped_tokens:
@@ -589,12 +560,22 @@ class GlobalExplainer:
                     GAI_token_matrix[token][original_label] = GAI_token_matrix[token][original_label] + nPIR_most_influential_feature
                     token_occurency_matrix[token][original_label] = token_occurency_matrix[token][original_label] + 1
 
+                    if token not in token_indices_input_reports_info.keys():
+                        token_indices_input_reports_info[token] = []
+                    token_indices_input_reports_info[token].append(report_index)
+
                     lemma = lemmatizer.lemmatize(token)
                     if lemma not in GAI_lemma_matrix.keys():
                         GAI_lemma_matrix[lemma] = [0]*len(self.label_list)
                         lemma_occurency_matrix[lemma] = [0]*len(self.label_list)
                     GAI_lemma_matrix[lemma][original_label] = GAI_lemma_matrix[lemma][original_label] + nPIR_most_influential_feature
                     lemma_occurency_matrix[lemma][original_label] = lemma_occurency_matrix[lemma][original_label] + 1
+
+                    if lemma not in lemma_indices_input_reports_info.keys():
+                        lemma_indices_input_reports_info[lemma] = []
+                    lemma_indices_input_reports_info[lemma].append(report_index)
+
+            report_index += 1
 
         for token, GAIs in GAI_token_matrix.items():
             GRI_token_matrix[token] = [max(self.compute_GRI(label, GAIs), 0) for label in range(len(GAIs))]
@@ -604,7 +585,8 @@ class GlobalExplainer:
 
         global_explanation_report = GlobalExplanationReport()
         global_explanation_report.fit(self.label_list, self.label_names, number_of_reports, GAI_token_matrix, GRI_token_matrix, token_occurency_matrix,
-                                      GAI_lemma_matrix, GRI_lemma_matrix, lemma_occurency_matrix)
+                                      GAI_lemma_matrix, GRI_lemma_matrix, lemma_occurency_matrix, token_indices_input_reports_info, lemma_indices_input_reports_info,
+                                      input_reports_info)
         return global_explanation_report
 
     @staticmethod
@@ -632,10 +614,14 @@ class GlobalExplanationReport:
         self.GRI_lemma_matrix = None
         self.token_occurency_matrix = None
         self.lemma_occurency_matrix = None
+        self.token_indices_input_reports_info = None
+        self.lemma_indices_input_reports_info = None
+        self.input_reports_info = None
+
         return
 
-    def fit(self, label_list, label_names, number_of_reports, GAI_token_matrix, GRI_token_matrix, token_occurency_matrix,
-            GAI_lemma_matrix, GRI_lemma_matrix, lemma_occurency_matrix):
+    def fit(self, label_list, label_names, number_of_reports, GAI_token_matrix, GRI_token_matrix, token_occurency_matrix, GAI_lemma_matrix,
+            GRI_lemma_matrix, lemma_occurency_matrix, token_indices_input_reports_info, lemma_indices_input_reports_info, input_reports_info):
         self.label_list = label_list
         self.label_names = label_names
         self.number_of_reports = number_of_reports
@@ -645,9 +631,28 @@ class GlobalExplanationReport:
         self.GRI_lemma_matrix = GRI_lemma_matrix
         self.token_occurency_matrix = token_occurency_matrix
         self.lemma_occurency_matrix = lemma_occurency_matrix
+        self.token_indices_input_reports_info = token_indices_input_reports_info
+        self.lemma_indices_input_reports_info = lemma_indices_input_reports_info
+        self.input_reports_info = input_reports_info
+
         return
 
+    def get_most_informative_local_explanations_by_token(self, token, label_list=-1):
+        if token not in self.token_indices_input_reports_info.keys():
+            print("INFO: Token {} not appear in most informative local explanations".format(token))
+            return None
+        if label_list == -1:
+            label_list = self.label_list
+        return [self.input_reports_info[i] for i in self.token_indices_input_reports_info[token]
+                if self.input_reports_info[i]["most_informative_local_explanation"].original_top_class in label_list]
+
     def global_explanation_report_to_dict(self):
+
+        input_reports_info_dict = [{"metadata": report_dict["metadata"],
+                                    "input_info": report_dict["input_info"],
+                                    "most_informative_local_explanation": report_dict["most_informative_local_explanation"].local_explanation_to_dict(),
+                                    } for report_dict in self.input_reports_info]
+
         global_explanation_dictionary = {
             "label_list": self.label_list,
             "label_names": self.label_names,
@@ -658,6 +663,9 @@ class GlobalExplanationReport:
             "GRI_lemma_matrix": self.GRI_lemma_matrix,
             "token_occurency_matrix": self.token_occurency_matrix,
             "lemma_occurency_matrix": self.lemma_occurency_matrix,
+            "token_indices_input_reports_info": self.token_indices_input_reports_info,
+            "lemma_indices_input_reports_info": self.lemma_indices_input_reports_info,
+            "input_reports_info": input_reports_info_dict
         }
         return global_explanation_dictionary
 
@@ -671,6 +679,12 @@ class GlobalExplanationReport:
         self.GRI_lemma_matrix = global_explanation_dictionary["GRI_lemma_matrix"]
         self.token_occurency_matrix = global_explanation_dictionary["token_occurency_matrix"]
         self.lemma_occurency_matrix = global_explanation_dictionary["lemma_occurency_matrix"]
+        self.token_indices_input_reports_info = global_explanation_dictionary["token_indices_input_reports_info"]
+        self.lemma_indices_input_reports_info = global_explanation_dictionary["lemma_indices_input_reports_info"]
+        self.input_reports_info = [{"metadata": report_dict["metadata"],
+                                    "input_info": report_dict["input_info"],
+                                    "most_informative_local_explanation": le.LocalExplanation.fit_from_dict(report_dict["most_informative_local_explanation"])}
+                                   for report_dict in global_explanation_dictionary["input_reports_info"]]
         return
 
     def save_global_explanation_report(self, output_path, input_name=None):

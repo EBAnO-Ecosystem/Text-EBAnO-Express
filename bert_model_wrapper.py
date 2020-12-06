@@ -16,6 +16,7 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
         self.label_list = label_list
         self.max_seq_length = max_seq_len
         self.clean_function = clean_function
+        self.max_wordpieces = self.max_seq_length-2
         return
 
     def get_label_list(self):
@@ -41,7 +42,7 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
     def texts_to_sequences(self, input_texts: List[str]) -> List[List[int]]:
         tokens = [self.tokenizer.tokenize(input_text) for input_text in input_texts]
         word_ids = [self.tokenizer.convert_tokens_to_ids(token_list) for token_list in tokens]
-        return word_ids
+        return word_ids[:min(len(word_ids), self.max_seq_length)]
 
     def sequences_to_texts(self, sequences: List[List[int]]) -> List[List[str]]:
         tokens = [self.tokenizer.convert_ids_to_tokens(ids) for ids in sequences]
@@ -49,10 +50,22 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
         return [re.sub(" ##", "", text) for text in texts]
 
     def texts_to_tokens(self, input_texts: List[List[str]]) -> List[List[str]]:
-        tokens = [self.tokenizer.basic_tokenizer.tokenize(input_text) for input_text in input_texts]
-        return tokens
 
-    def extract_embedding(self, input_texts, batch_size, layers=[8, 9, 10, 11], layers_aggregation_function="sum"):
+        # tokens = self.tokenizer.basic_tokenizer.tokenize(input_text)
+
+        # n_wordpieces = len(wordpieces)  # Number of wordpieces in the current input
+        # n_tokens = len(tokens)  # Number of full tokens in the current input
+
+        tokens_list = []
+        for input_text in input_texts:
+            wordpieces = self.tokenizer.tokenize(input_text)
+            n_wordpieces_max = min(len(wordpieces), self.max_wordpieces)
+            n_tokens_max = len([wordpiece for wordpiece in wordpieces[:n_wordpieces_max] if wordpiece.startswith("##") is False])
+            tokens = self.tokenizer.basic_tokenizer.tokenize(input_text)[:n_tokens_max]
+            tokens_list.append(tokens)
+        return tokens_list
+
+    def extract_embedding(self, input_texts, batch_size, layers=[8, 9, 10, 11], layers_aggregation_function="avg"):
 
         wordpieces_embedding_tensor = self.__extract_wordpieces_embedding(input_texts, batch_size, layers)
 
@@ -63,23 +76,28 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
 
         list_embedding_tensors = []
 
-        for input_text, current_embedding in zip(input_texts, aggregated_embedding):
+        for input_text, current_full_embedding in zip(input_texts, aggregated_embedding):
             wordpieces = self.tokenizer.tokenize(input_text)
-            tokens = self.tokenizer.basic_tokenizer.tokenize(input_text)
+            #tokens = self.tokenizer.basic_tokenizer.tokenize(input_text)
 
-            n_wordpieces = len(wordpieces)  # Number of wordpieces in the current input
-            n_tokens = len(tokens)  # Number of full tokens in the current input
+            #n_wordpieces = len(wordpieces)  # Number of wordpieces in the current input
+            #n_tokens = len(tokens)  # Number of full tokens in the current input
 
-            current_tokens_embedding_tensor = np.empty([n_tokens, 768], dtype=np.float32)
+            current_embedding = current_full_embedding[1:self.max_wordpieces+1]
+
+            n_wordpieces_max = min(len(wordpieces), self.max_wordpieces)
+            n_tokens_max = len([wordpiece for wordpiece in wordpieces[:n_wordpieces_max] if wordpiece.startswith("##") is False])
+
+            current_tokens_embedding_tensor = np.zeros([n_tokens_max, 768], dtype=np.float32)
 
             # Construct an embedding tensor for full tokens starting from embedding tensor for wordpieces
             t_index = 0  # Token index
             outer_wp_index = 0
-            while outer_wp_index < n_wordpieces:
+            while outer_wp_index < n_wordpieces_max:
                 outer_wp = wordpieces[outer_wp_index]
                 sum_embedding_accumulator = current_embedding[outer_wp_index]
                 count_embedding_accumulator = 1
-                for inner_wp_index in range(outer_wp_index+1, n_wordpieces):
+                for inner_wp_index in range(outer_wp_index+1, n_wordpieces_max):
                     inner_wp = wordpieces[inner_wp_index]
                     if inner_wp.startswith("##"):
                         sum_embedding_accumulator = sum_embedding_accumulator + current_embedding[inner_wp_index]

@@ -1,3 +1,5 @@
+import perturbation as pe
+import feature_extraction as fe
 import perturbation_scores
 import numpy as np
 
@@ -28,6 +30,7 @@ class LocalExplanationManager:
 
     def execute_local_explanation_phase(self):
         """ Execute the Local Explanation Phase. """
+
         # Create a list of texts: first element is the original text, the others are the perturbed texts
         texts = [self.input_text]
         for perturbation in self.perturbations:
@@ -114,14 +117,16 @@ class LocalExplanationManager:
                                                          nPIRs)  # List of all nPIRP obtained by the current feature on each class label
 
             # Create an instance of the LocalExplanation
-            local_explanation = LocalExplanation(local_explanation_id,  # Unique identifier of the local explanation for each input text
-                                                 perturbation,  # Perturbation instance (each perturbation contains a single Feature instance)
-                                                 self.original_probabilities,  # probabilities predicted by the model on the original text
-                                                 perturbed_probabilities,  # probabilities predicted by the model on the perturbed version of text
-                                                 original_top_class,  # Most likely class predicted by the model on the original text
-                                                 perturbed_top_class,   # Most likely class predicted by the model on the perturbed text
-                                                 coi,  # Class of interest
-                                                 numerical_explanation)  # Instance of the numerical explanation of the current feature
+            local_explanation = LocalExplanation()
+
+            local_explanation.fit(local_explanation_id,  # Unique identifier of the local explanation for each input text
+                                  perturbation,  # Perturbation instance (each perturbation contains a single Feature instance)
+                                  self.original_probabilities.tolist(),  # probabilities predicted by the model on the original text
+                                  perturbed_probabilities.tolist(),  # probabilities predicted by the model on the perturbed version of text
+                                  original_top_class,  # Most likely class predicted by the model on the original text
+                                  perturbed_top_class,   # Most likely class predicted by the model on the perturbed text
+                                  coi,  # Class of interest
+                                  numerical_explanation)  # Instance of the numerical explanation of the current feature
 
             self.local_explanations.append(local_explanation)
             local_explanation_id += 1
@@ -130,14 +135,19 @@ class LocalExplanationManager:
 
 
 class LocalExplanation:
-    def __init__(self, local_explanation_id, perturbation, original_probabilities, perturbed_probabilities,
-                 original_top_class, perturbed_top_class, class_of_interest, numerical_explanation):
-        """ LocalExplanation Initializer.
-        Args:
-            local_explanation_id (int): Local explanation identifier
-            perturbation ():
-            class_of_interest ():
-        """
+    def __init__(self):
+        self.local_explanation_id = None
+        self.perturbation = None
+        self.original_probabilities = None
+        self.perturbed_probabilities = None
+        self.original_top_class = None
+        self.perturbed_top_class = None
+        self.class_of_interest = None
+        self.numerical_explanation = None
+        return
+
+    def fit(self, local_explanation_id, perturbation, original_probabilities, perturbed_probabilities,
+            original_top_class, perturbed_top_class, class_of_interest, numerical_explanation):
         self.local_explanation_id = local_explanation_id
         self.perturbation = perturbation
         self.original_probabilities = original_probabilities
@@ -147,6 +157,63 @@ class LocalExplanation:
         self.class_of_interest = class_of_interest
         self.numerical_explanation = numerical_explanation
         return
+
+    def fit_from_dict(self, local_explanation_dict):
+        self.local_explanation_id = local_explanation_dict["local_explanation_id"]
+        self.original_probabilities = local_explanation_dict["original_probabilities"]
+        self.perturbed_probabilities = local_explanation_dict["perturbed_probabilities"]
+        self.original_top_class = local_explanation_dict["original_top_class"]
+        self.perturbed_top_class = local_explanation_dict["perturbed_top_class"]
+        self.class_of_interest = local_explanation_dict["class_of_interest"]
+
+        feature = fe.Feature(local_explanation_dict["feature_id"],
+                             local_explanation_dict["feature_type"],
+                             local_explanation_dict["feature_description"],
+                             local_explanation_dict["positions_tokens"],
+                             local_explanation_dict["combination"])
+
+        self.perturbation = pe.Perturbation(local_explanation_dict["perturbation_id"],
+                                            local_explanation_dict["perturbation_type"],
+                                            local_explanation_dict["perturbed_text"],
+                                            feature)
+
+        self.numerical_explanation = NumericalExplanation(local_explanation_dict["nPIR_original_top_class"],
+                                                          local_explanation_dict["nPIRP_original_top_class"],
+                                                          local_explanation_dict["nPIR_class_of_interest"],
+                                                          local_explanation_dict["nPIRP_class_of_interest"],
+                                                          local_explanation_dict["nPIRs"],
+                                                          local_explanation_dict["nPIRPs"])
+
+        return
+
+    def local_explanation_to_dict(self):
+        """ Converts a single local explanation into dictionary. """
+        perturbation = self.perturbation
+        feature = perturbation.feature
+        local_explanation_dict = {
+            "local_explanation_id": self.local_explanation_id,
+            "feature_id": feature.feature_id,
+            "feature_type": feature.feature_type,
+            "feature_description": feature.description,
+            "positions_tokens": feature.positions_tokens,
+            "combination": feature.combination,
+            "perturbation_id": perturbation.perturbation_id,
+            "perturbation_type": perturbation.perturbation_type,
+            "perturbed_text": perturbation.perturbed_text,
+            "original_probabilities": self.original_probabilities,
+            "perturbed_probabilities": self.perturbed_probabilities,
+            "original_top_class": self.original_top_class,
+            "perturbed_top_class": self.perturbed_top_class,
+            "class_of_interest": self.class_of_interest,
+            "nPIR_original_top_class": self.numerical_explanation.nPIR_original_top_class,
+            "nPIRP_original_top_class": self.numerical_explanation.nPIRP_original_top_class,
+            "nPIR_class_of_interest": self.numerical_explanation.nPIR_class_of_interest,
+            "nPIRP_class_of_interest": self.numerical_explanation.nPIRP_class_of_interest,
+            "nPIRs": self.numerical_explanation.nPIRs,
+            "nPIRPs": self.numerical_explanation.nPIRPs,
+            "k": self.perturbation.feature.k
+        }
+        return local_explanation_dict
 
 
 class NumericalExplanation:

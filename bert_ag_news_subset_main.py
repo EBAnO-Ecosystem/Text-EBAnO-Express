@@ -4,7 +4,7 @@ import re
 import os
 import keras
 import tensorflow as tf
-
+import pandas as pd
 from official.nlp.bert import tokenization
 
 
@@ -16,9 +16,13 @@ def cleaning_function_bert(text):
     text = re.sub('#39', ' ', text) # Remove special Charaters
     text = re.sub('<.*?>', '', text) # Remove html
     text = re.sub(' +', ' ', text) # Merge multiple blank spaces
-
+    text = text.replace("<br>", "")
+    text = text.replace("</br>", "")
     return text
 
+def load_dataset_from_csv(dataset_path):
+    df = pd.read_csv(dataset_path)
+    return df
 
 def load_model(model_directory):
     """Loads the fine-tuned model from directory.
@@ -56,25 +60,17 @@ if __name__ == "__main__":
 
     model_wrapper = bert_model_wrapper.BertModelWrapper(model, extractor, tokenizer, label_list=[0, 1, 2, 3], max_seq_len=max_seq_length, clean_function=cleaning_function_bert)
 
-    texts = ['''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''','''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional 
-      leaders of both parties Monday for his aggressive proposal to overhaul Social Security during his second term.''']
+    #texts = ['''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional ''']
 
-    #texts = ['''Bush, Lawmakers Discuss Social Security - President Bush sought support from congressional
-          #leaders of both Monday his aggressive proposal to overhaul Social Security during his second term.''']
+    #tokens = tokenizer.tokenize(texts[0])
+    #print("Tokens: {}".format(tokens))
+    #word_ids = tokenizer.convert_tokens_to_ids(tokens)
+    #print("Word Ids: {}".format(word_ids))
 
-    tokens = tokenizer.tokenize(texts[0])
-    print("Tokens: {}".format(tokens))
-    word_ids = tokenizer.convert_tokens_to_ids(tokens)
-    print("Word Ids: {}".format(word_ids))
+    df = load_dataset_from_csv("saved_models/fine_tuned/20201128_bert_model_ag_news_subset_exp0/df_test.csv")
+
+    texts = df["text"][100:105].tolist()
+    true_labels = df["label"][100:105].tolist()
 
     #embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
 
@@ -82,7 +78,13 @@ if __name__ == "__main__":
 
     exp = explainer.LocalExplainer(model_wrapper, "20201128_bert_model_ag_news_subset_exp0")
 
-    exp.fit_transform(texts, [-1]*len(texts), True, True, True, True)
+    exp.fit_transform(input_texts=texts,
+                      classes_of_interest=[-1]*len(texts),
+                      expected_labels=true_labels,
+                      flag_pos=True,
+                      flag_sen=True,
+                      flag_mlwe=True,
+                      flag_combinations=True)
 
     #exp.fit(input_texts, [1])
 

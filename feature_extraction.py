@@ -434,6 +434,8 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         self.__parse_kmeans_configuration()
         if self.standardization is True:
             self.__standardize_embedding_matrix()
+        if self.normalization is True:
+            self.__normalize_embedding_matrix()
         self.k_max = self.__k_max()
         self.k_clusters = {}
         self.kmeans_info = {}
@@ -512,6 +514,7 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         self.n_init = self.config["kmeans"]["n_init"]
         self.init_type = self.config["kmeans"]["init_type"]
         self.standardization = self.config["kmeans"]["standardization"]
+        self.normalization = self.config["kmeans"]["normalization"]
         return
 
     def __k_max(self):
@@ -530,14 +533,17 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
                 self.k_clusters[k] = {"features": [local_explanation.perturbation.feature],
                                       "weighted_nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest
                                                          / len(local_explanation.perturbation.feature.positions_tokens.keys())],
+                                      "nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest],
                                       "k": k}
             else:
                 self.k_clusters[k]["features"].append(local_explanation.perturbation.feature)
+                self.k_clusters[k]["nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest)
                 self.k_clusters[k]["weighted_nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest
-                                                            / len(local_explanation.perturbation.feature.positions_tokens.keys()))
+                                                            / len(local_explanation.perturbation.feature.positions_tokens.keys()) )
 
         for k in self.k_clusters:
-            self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["weighted_nPIRs"])
+            #self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["weighted_nPIRs"])
+            self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["nPIRs"])
 
         top_k = max(self.k_clusters, key=lambda k: self.k_clusters[k]["k_score"])
         return top_k, self.k_clusters[top_k]
@@ -552,29 +558,39 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         """
         kmeans = KMeans(n_clusters=k, max_iter=self.max_iterations, n_init=self.n_init, init=self.init_type)
         kmeans.fit(self.embedding_matrix)
-        lebels_word = kmeans.labels_
+        labels_word = kmeans.labels_
 
         clusters = []  # list of clusters, each cluster is a dictionary
 
         for cluster_index in range(k):
             cluster = {}
             for position in range(len(self.tokens)):
-                if lebels_word[position] == cluster_index:
+                if labels_word[position] == cluster_index:
                     cluster[position] = self.tokens[position]
             clusters.append(cluster)
 
         return clusters
 
     @staticmethod
-    def __k_score(nPIRs):
+    def __k_score2(nPIRs):
         max_nPIR = max(nPIRs)
         min_nPIR = min(nPIRs)
         return max_nPIR - min_nPIR
+
+    @staticmethod
+    def __k_score(nPIRs):
+        max_nPIR = max(nPIRs)
+        return max_nPIR
 
     def __standardize_embedding_matrix(self):
         mean = np.mean(self.embedding_matrix)
         st_dev = np.std(self.embedding_matrix)
         self.embedding_matrix = self.embedding_matrix - mean
         self.embedding_matrix = self.embedding_matrix / st_dev
+        return
+
+    def __normalize_embedding_matrix(self):
+        norm = np.linalg.norm(self.embedding_matrix)
+        self.embedding_matrix = self.embedding_matrix / norm
         return
 

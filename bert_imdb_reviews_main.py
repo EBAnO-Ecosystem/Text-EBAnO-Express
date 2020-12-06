@@ -4,7 +4,8 @@ import re
 import os
 import keras
 import tensorflow as tf
-
+import tensorflow_datasets as tfds
+import pandas as pd
 from official.nlp.bert import tokenization
 
 
@@ -16,7 +17,8 @@ def cleaning_function_bert(text):
     text = re.sub('#39', ' ', text) # Remove special Charaters
     text = re.sub('<.*?>', '', text) # Remove html
     text = re.sub(' +', ' ', text) # Merge multiple blank spaces
-
+    text = text.replace("<br>", "")
+    text = text.replace("</br>", "")
     return text
 
 
@@ -42,6 +44,21 @@ def load_model(model_directory):
     return model, tokenizer, max_seq_length, extractor
 
 
+def load_imdb_dataset(train_slice, test_slice, as_supervised=False):
+    (train_data, test_data), info = tfds.load('imdb_reviews',
+                                              split=['train[{}]'.format(train_slice), 'test[{}]'.format(test_slice)],
+                                              as_supervised=as_supervised,
+                                              with_info=True
+                                              )
+
+    return train_data, test_data
+
+
+def load_dataset_from_csv(dataset_path):
+    df = pd.read_csv(dataset_path)
+    return df
+
+
 if __name__ == "__main__":
 
     model_dir = "saved_models/fine_tuned/20201117_bert_model_imdb_reviews_exp_0"
@@ -59,20 +76,27 @@ if __name__ == "__main__":
     word_ids = tokenizer.convert_tokens_to_ids(tokens)
     print("Word Ids: {}".format(word_ids))
 
-    # embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
+    df = load_dataset_from_csv("saved_models/fine_tuned/20201117_bert_model_imdb_reviews_exp_0/df_test.csv")
 
-    # print(embeddings)
+    texts = df["text"][1000:1005].tolist()
+    true_labels = df["label"][1000:1005].tolist()
+
+    #true_labels = None
+    print(texts)
+
+    #embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
+
+    #print(embeddings)
 
     exp = explainer.LocalExplainer(model_wrapper, "20201117_bert_model_imdb_reviews_exp_0")
 
     exp.fit_transform(input_texts=texts,
                       classes_of_interest=[-1]*len(texts),
-                      expected_labels=None,
+                      expected_labels=true_labels,
                       flag_pos=True,
                       flag_sen=True,
                       flag_mlwe=True,
                       flag_combinations=True)
-
 
 
 
