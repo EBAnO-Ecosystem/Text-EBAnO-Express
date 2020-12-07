@@ -10,6 +10,8 @@ outputs
     |                   |---- local_explanations_experiments
     |
     |---- 20201128_bert_model_ag_news_subset_exp0
-                        |
-                        |---- global_explanations_experiments
-                        |---- local_explanations_experiments
+    |                   |
+    |                   |---- global_explanations_experiments
+    |                   |---- local_explanations_experiments
+    |
+    |---- tmp
