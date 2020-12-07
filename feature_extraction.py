@@ -240,12 +240,14 @@ class PartsOfSpeechFeaturesExtraction(FeaturesExtractionMethod):
         feature_id = 0
         # Extract one feature for each part-of-speech
         for pos in pos_scheduled:
+
             feature = self.fit_feature(feature_id,
                                        tokens_tags_positions,
                                        pos,
                                        1)
-            features.append(feature)
-            feature_id += 1
+            if feature is not None:
+                features.append(feature)
+                feature_id += 1
 
         if self.flag_combinations is True:
             combination_features = self.combine_feature(features, 2, len(features), self.feature_extraction_type)
@@ -259,12 +261,14 @@ class PartsOfSpeechFeaturesExtraction(FeaturesExtractionMethod):
             if token_tag_position[1] in pos["tags"]:
                 positions_tokens[token_tag_position[2]] = token_tag_position[0]
 
-        feature = Feature(feature_id,
-                          self.feature_extraction_type,
-                          self.create_description(pos["description"]),
-                          positions_tokens,
-                          combination)
-
+        if len(positions_tokens) > 0:
+            feature = Feature(feature_id,
+                              self.feature_extraction_type,
+                              self.create_description(pos["description"]),
+                              positions_tokens,
+                              combination)
+        else:
+            feature = None
         return feature
 
     @staticmethod

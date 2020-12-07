@@ -16,7 +16,7 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
         self.label_list = label_list
         self.max_seq_length = max_seq_len
         self.clean_function = clean_function
-        self.max_wordpieces = self.max_seq_length-2
+        self.max_wordpieces = self.max_seq_length
         return
 
     def get_label_list(self):
@@ -42,7 +42,7 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
     def texts_to_sequences(self, input_texts: List[str]) -> List[List[int]]:
         tokens = [self.tokenizer.tokenize(input_text) for input_text in input_texts]
         word_ids = [self.tokenizer.convert_tokens_to_ids(token_list) for token_list in tokens]
-        return word_ids[:min(len(word_ids), self.max_seq_length)]
+        return [word_id[:min(len(word_id), self.max_wordpieces)] for word_id in word_ids]
 
     def sequences_to_texts(self, sequences: List[List[int]]) -> List[List[str]]:
         tokens = [self.tokenizer.convert_ids_to_tokens(ids) for ids in sequences]

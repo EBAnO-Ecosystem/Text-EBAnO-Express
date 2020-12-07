@@ -76,7 +76,7 @@ class LocalExplainer:
         self.raw_texts = input_texts  # List[str] containing the original raw input texts
         self.classes_of_interest = classes_of_interest  # List[int] containing the class_of_interest for the explanation of each input
         self.cleaned_texts = [self.model_wrapper.clean_function(text) for text in input_texts]  # List[str] Clean each input with the clean_function specified in the model_wrapper
-        self.sequences = self.model_wrapper.texts_to_sequences(input_texts)  # List[List[int]] list of sequences ids (one sequence of ids for each input text)
+        self.sequences = self.model_wrapper.texts_to_sequences(self.cleaned_texts)  # List[List[int]] list of sequences ids (one sequence of ids for each input text)
         self.tokens_list = self.model_wrapper.texts_to_tokens(self.cleaned_texts)  # List[List[str]] list of sequences tokens (one sequence of tokens for each input text)
         self.preprocessed_texts = self.model_wrapper.sequences_to_texts(self.sequences)  # List[str] list of texts by joining each sequence of tokens
         return
@@ -430,6 +430,9 @@ class LocalExplanationReport:
         print("\n")
         return
 
+    def get_filtered_local_explanations(self, feature_type_list=["MLWE", "POS", "SEN"], combination_list=[1, 2]):
+        return self.filter_local_explanations(self.local_explanations, feature_type_list, combination_list)
+
     @staticmethod
     def create_local_explanation_from_dict(local_explanation_dict):
         local_explanation = le.LocalExplanation()
@@ -473,7 +476,7 @@ class LocalExplanationReport:
     @staticmethod
     def filter_local_explanations_by_feature_combination(local_explanations, combination_list=[1, 2]):
         """ Filters the local_explanation by their feature.combination value. """
-        return [local_explanation for local_explanation in local_explanations if local_explanation.perturbation.feature.combination == any(combination_list)]
+        return [local_explanation for local_explanation in local_explanations if local_explanation.perturbation.feature.combination in combination_list]
 
     @staticmethod
     def filter_local_explanations_by_nPIR_range(local_explanations, nPIR_range=[-1, +1], class_of_interest=-1):
@@ -493,6 +496,10 @@ class LocalExplanationReport:
         else:
             most_influential_feature = max(local_explanations, key=lambda local_explanation: local_explanation.numerical_explanation.nPIRs.class_of_interest)
         return most_influential_feature
+
+    @staticmethod
+    def filter_local_explanations(local_explanations, feature_type_list=["MLWE", "POS", "SEN"], combination_list=[1, 2]):
+        return [l_e for l_e in local_explanations if l_e.perturbation.feature.feature_type in feature_type_list and l_e.perturbation.feature.combination in combination_list]
 
 
 class GlobalExplainer:
