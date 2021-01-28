@@ -2,7 +2,7 @@
 /saved_models/fine_tuned/*
 /saved_models/pre_trained/*
 /outputs/*
-
+.vscode
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
