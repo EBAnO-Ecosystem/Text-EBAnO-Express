@@ -244,18 +244,18 @@ class LocalExplainer:
         model_output_folder = os.path.join(output_folder, self.model_name)
         if not os.path.isdir(model_output_folder):
             print("INFO: Output Model folder: {} not exists, then it is created inside {}.".format(model_output_folder, output_folder))
-            os.mkdir(output_folder)
+            os.makedirs(output_folder, exist_ok=True)
 
         model_global_explanations_folder = os.path.join(model_output_folder, "global_explanations_experiments")
         model_local_explanations_folder = os.path.join(model_output_folder, "local_explanations_experiments")
 
         if not os.path.isdir(model_global_explanations_folder):
             print("INFO: Output global model explanations folder created: {} .".format(model_global_explanations_folder))
-            os.mkdir(model_global_explanations_folder)
+            os.makedirs(model_global_explanations_folder, exist_ok=True)
 
         if not os.path.isdir(model_local_explanations_folder):
             print("INFO: Output local model explanations folder created: {} .".format(model_local_explanations_folder))
-            os.mkdir(model_local_explanations_folder)
+            os.makedirs(model_local_explanations_folder, exist_ok=True)
 
         base_experiment_folder = os.path.join(model_local_explanations_folder, timestamp)
         local_explanations_folder = os.path.join(base_experiment_folder, "local_explanations")
