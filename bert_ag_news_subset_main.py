@@ -7,6 +7,11 @@ import tensorflow as tf
 import pandas as pd
 from official.nlp.bert import tokenization
 
+# RUN this the first time to load nltk models
+# import nltk
+# nltk.download('averaged_perceptron_tagger')
+# nltk.download('punkt')
+
 
 def cleaning_function_bert(text):
     text = re.sub("@\S+", " ", text) # Remove Mentions
