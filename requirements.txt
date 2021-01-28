@@ -1,53 +1,6 @@
-absl-py==0.10.0
-appnope==0.1.0
-argon2-cffi @ file:///opt/concourse/worker/volumes/live/c4db8eed-7de0-4d68-400c-2ea7e21d3750/volume/argon2-cffi_1596828478065/work
-astunparse==1.6.3
-attrs @ file:///tmp/build/80754af9/attrs_1600298409949/work
-backcall==0.2.0
-bleach @ file:///tmp/build/80754af9/bleach_1600439572647/work
-cachetools==4.1.1
-certifi==2020.6.20
-cffi @ file:///opt/concourse/worker/volumes/live/0df07f09-9875-42dd-4a5c-3f900d1fbce2/volume/cffi_1598370762311/work
-chardet==3.0.4
-click==7.1.2
-cycler==0.10.0
-Cython==0.29.21
-dataclasses==0.6
-decorator==4.4.2
-defusedxml==0.6.0
-dill==0.3.3
-dm-tree==0.1.5
-entrypoints==0.3
-future==0.18.2
-gast==0.3.3
-gin-config==0.4.0
-google-api-core==1.23.0
-google-api-python-client==1.12.8
-google-auth==1.21.2
-google-auth-httplib2==0.0.4
-google-auth-oauthlib==0.4.1
-google-cloud-bigquery==2.4.0
-google-cloud-core==1.4.3
-google-crc32c==1.0.0
-google-pasta==0.2.0
-google-resumable-media==1.1.0
-googleapis-common-protos==1.52.0
-grpcio==1.32.0
 h5py==2.10.0
 httplib2==0.18.1
-idna==2.10
-importlib-metadata @ file:///opt/concourse/worker/volumes/live/84197498-cbc0-4436-7ce0-03c4490b7a28/volume/importlib-metadata_1593446431408/work
-importlib-resources==3.3.0
-ipykernel @ file:///opt/concourse/worker/volumes/live/73e8766c-12c3-4f76-62a6-3dea9a7da5b7/volume/ipykernel_1596206701501/work/dist/ipykernel-5.3.4-py3-none-any.whl
-ipython @ file:///opt/concourse/worker/volumes/live/bb221eaa-cc1a-4ab2-40f7-74a2020a44b1/volume/ipython_1599056234390/work
-ipython-genutils==0.2.0
-jedi @ file:///opt/concourse/worker/volumes/live/152cd167-7b79-4fbd-5c97-d7b338805c2b/volume/jedi_1598371617305/work
-Jinja2==2.11.2
-joblib==0.16.0
 jsonschema==3.2.0
-jupyter-client @ file:///tmp/build/80754af9/jupyter_client_1594826976318/work
-jupyter-core==4.6.3
-kaggle==1.5.9
 Keras==2.4.3
 Keras-Preprocessing==1.1.2
 kiwisolver==1.3.1
@@ -55,75 +8,21 @@ Markdown==3.2.2
 MarkupSafe==1.1.1
 matplotlib==3.3.3
 mistune==0.8.4
-nbconvert==5.6.1
-nbformat==5.0.7
 nltk==3.5
-notebook @ file:///opt/concourse/worker/volumes/live/4befab56-a4d7-490d-6835-d3c47a466e66/volume/notebook_1596838669687/work
 numpy==1.18.5
 oauthlib==3.1.0
-opencv-python-headless==4.4.0.46
-opt-einsum==3.3.0
-packaging==20.4
 pandas==1.1.4
 pandocfilters==1.4.2
 parso==0.7.0
 pexpect==4.8.0
-pickleshare==0.7.5
 Pillow==8.0.1
-prometheus-client==0.8.0
-promise==2.3
-prompt-toolkit @ file:///tmp/build/80754af9/prompt-toolkit_1598885458782/work
-proto-plus==1.11.0
-protobuf==3.13.0
-psutil==5.7.3
-ptyprocess==0.6.0
-py-cpuinfo==7.0.0
-pyasn1==0.4.8
-pyasn1-modules==0.2.8
-pycparser @ file:///tmp/build/80754af9/pycparser_1594388511720/work
-Pygments @ file:///tmp/build/80754af9/pygments_1600458456400/work
-pyparsing==2.4.7
-pyrsistent @ file:///opt/concourse/worker/volumes/live/656e0c1b-ef87-4251-4a51-1290b2351993/volume/pyrsistent_1600141745371/work
-python-dateutil==2.8.1
-python-slugify==4.0.1
-pytz==2020.4
-PyYAML==5.3.1
-pyzmq==19.0.2
-regex==2020.7.14
-requests==2.24.0
-requests-oauthlib==1.3.0
-rsa==4.6
 scikit-learn==0.23.2
 scipy==1.4.1
-Send2Trash==1.5.0
-sentencepiece==0.1.94
-six==1.15.0
-slugify==0.0.1
 tensorboard==2.3.0
-tensorboard-plugin-wit==1.7.0
 tensorflow==2.3.0
-tensorflow-addons==0.11.2
-tensorflow-datasets==4.1.0
-tensorflow-estimator==2.3.0
-tensorflow-hub==0.10.0
-tensorflow-metadata==0.25.0
-tensorflow-model-optimization==0.5.0
 termcolor==1.1.0
 terminado==0.8.3
 testpath==0.4.4
 text-unidecode==1.3
 tf-models-official==2.3.0
 tf-slim==1.1.0
-threadpoolctl==2.1.0
-tornado==6.0.4
-tqdm==4.49.0
-traitlets==4.3.3
-typeguard==2.10.0
-typing-extensions==3.7.4.3
-uritemplate==3.0.1
-urllib3==1.25.10
-wcwidth @ file:///tmp/build/80754af9/wcwidth_1593447189090/work
-webencodings==0.5.1
-Werkzeug==1.0.1
-wrapt==1.12.1
-zipp==3.1.0
