@@ -9,14 +9,15 @@ import re
 
 
 class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
-    def __init__(self, bert_model, extractor, tokenizer, label_list, max_seq_len, clean_function):
+    def __init__(self, bert_model, extractor, tokenizer, label_list, max_seq_len, clean_function, from_logits=False):
         self.model = bert_model
         self.extractor = extractor
         self.tokenizer = tokenizer
         self.label_list = label_list
         self.max_seq_length = max_seq_len
         self.clean_function = clean_function
-        self.max_wordpieces = self.max_seq_length
+        self.max_wordpieces = self.max_seq_length-2
+        self.from_logits = from_logits
         return
 
     def get_label_list(self):
@@ -29,7 +30,7 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
 
         predictions = self.model.predict(tensor_batch)
 
-        if len(self.label_list) == 2:
+        if len(self.label_list) == 2 and self.from_logits is False:
             predictions = np.append(1-predictions, predictions, axis=1).reshape(len(input_texts),2)
         return predictions
 
@@ -67,7 +68,7 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
 
     def extract_embedding(self, input_texts, batch_size, layers=[8, 9, 10, 11], layers_aggregation_function="avg"):
 
-        wordpieces_embedding_tensor = self.__extract_wordpieces_embedding(input_texts, batch_size, layers)
+        wordpieces_embedding_tensor = self.__extract_wordpieces_embedding(input_texts, batch_size, layers, max_seq_length=self.max_seq_length)
 
         if layers_aggregation_function == "sum":
             aggregated_embedding = np.sum(wordpieces_embedding_tensor, axis=0)
@@ -117,8 +118,8 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
 
         return list_embedding_tensors
 
-    def __extract_wordpieces_embedding(self, input_texts, batch_size, layers):
-        wordpieces_embedding_tensor = np.empty([len(layers), len(input_texts), 256, 768], dtype=np.float32)
+    def __extract_wordpieces_embedding(self, input_texts, batch_size, layers, max_seq_length=256, embedding_size=768):
+        wordpieces_embedding_tensor = np.empty([len(layers), len(input_texts), max_seq_length, embedding_size], dtype=np.float32)
 
         # Extract embedding for each batch
         for i in range(len(input_texts)//batch_size):

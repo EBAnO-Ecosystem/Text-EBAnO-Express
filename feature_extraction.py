@@ -4,11 +4,13 @@ from abc import ABC, abstractmethod
 from typing import List
 from itertools import combinations
 from sklearn.cluster import KMeans
-
+import os
+from utils import utils
 import numpy as np
 import nltk
 import yaml
 import math
+import random
 
 
 class FeaturesExtractionManager:
@@ -31,7 +33,7 @@ class FeaturesExtractionManager:
         mlwe_features (list[Feature]): List of features extracted with the MultiLayer Word Embedding feature extraction method
     """
     def __init__(self, raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, embedding_tensor, model_wrapper,
-                 flag_pos=True, flag_sen=True, flag_mlwe=True, flag_combinations=True):
+                 flag_pos=True, flag_sen=True, flag_mlwe=True, flag_rnd=False, flag_combinations=True):
         """ FeaturesExtractionPhase Initializer.
         Args:
             raw_text (str):  String containing the raw input text (not preprocessed)
@@ -53,13 +55,16 @@ class FeaturesExtractionManager:
         self.flag_pos = flag_pos
         self.flag_sen = flag_sen
         self.flag_mlwe = flag_mlwe
+        self.flag_rnd = flag_rnd
         self.flag_combinations = flag_combinations
         self.pos_features_extraction_method = None
         self.sen_features_extraction_method = None
         self.mlwe_features_extraction_method = None
+        self.rnd_features_extraction_method = None
         self.pos_features = []  # List[:obj:Feature] extracted with the PartsOfSpeechFeaturesExtraction
         self.sen_features = []  # List[:obj:Feature] extracted with the SentencesFeaturesExtraction
         self.mlwe_features = []  # List[:obj:Feature] extracted with the MultiLayerWordEmbeddingFeaturesExtraction
+        self.rnd_features = []  # List[:obj:Feature] extracted with the RandomFeaturesExtraction
 
     def execute_feature_extraction_phase(self):
         """ Execute the Feature Extraction Phase. """
@@ -81,6 +86,15 @@ class FeaturesExtractionManager:
                                                                                              self.tokens, self.class_of_interest, self.embedding_tensor,
                                                                                              self.model_wrapper, self.flag_combinations)
             self.mlwe_features = self.mlwe_features_extraction_method.extract_features()
+
+        if self.flag_rnd:
+            # If flag_rnd is True, then instantiate the RandomFeaturesExtraction and extract RND features
+            self.rnd_features_extraction_method = RandomFeaturesExtraction(self.raw_text, self.cleaned_text,
+                                                                           self.preprocessed_text,
+                                                                           self.tokens, self.class_of_interest,
+                                                                           self.model_wrapper,
+                                                                           self.flag_combinations)
+            self.rnd_features = self.rnd_features_extraction_method.extract_features()
         return
 
     def get_pos_features(self):
@@ -95,9 +109,13 @@ class FeaturesExtractionManager:
         """ Returns: (list[Feature]) List containing all the extracted MultiLayer Word Embedding features. """
         return self.mlwe_features
 
+    def get_rnd_features(self):
+        """ Returns: (list[Feature]) List containing all the extracted Random features. """
+        return self.rnd_features
+
     def get_all_features(self):
         """ Returns: (list[Feature]) List containing all the extracted features (with all feature extraction methods). """
-        return self.pos_features + self.sen_features + self.mlwe_features
+        return self.pos_features + self.sen_features + self.mlwe_features + self.rnd_features
 
 
 class Feature:
@@ -290,7 +308,7 @@ class PartsOfSpeechFeaturesExtraction(FeaturesExtractionMethod):
         Returns:
             config (dict): dictionary with pos scheduled and tags for each pos
         """
-        with open(r'config_files/pos_configuration.yaml') as file:
+        with open(os.path.join(utils.get_project_root(), 'config_files/pos_configuration.yaml')) as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
         return config
 
@@ -411,7 +429,7 @@ class MultiLayerWordEmbeddingFeaturesExtraction(FeaturesExtractionMethod):
         Returns:
             config (dict): dictionary with pos scheduled and tags for each pos
         """
-        with open(r'config_files/mlwe_configuration.yaml') as file:
+        with open(os.path.join(utils.get_project_root(),'config_files/mlwe_configuration.yaml')) as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
         return config
 
@@ -536,18 +554,26 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
             if k not in self.k_clusters:
                 self.k_clusters[k] = {"features": [local_explanation.perturbation.feature],
                                       "weighted_nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest
-                                                         / len(local_explanation.perturbation.feature.positions_tokens.keys())],
+                                                         / 0.001+math.log(len(local_explanation.perturbation.feature.positions_tokens.keys()))],
+                                      "percentage_nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest
+                                                         + 0.5*((1-len(local_explanation.perturbation.feature.positions_tokens.keys())/ len(self.tokens)) + 0.001) ],
                                       "nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest],
                                       "k": k}
             else:
                 self.k_clusters[k]["features"].append(local_explanation.perturbation.feature)
                 self.k_clusters[k]["nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest)
                 self.k_clusters[k]["weighted_nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest
-                                                            / len(local_explanation.perturbation.feature.positions_tokens.keys()) )
+                                                            / 0.001+math.log(len(local_explanation.perturbation.feature.positions_tokens.keys()) ))
+                self.k_clusters[k]["percentage_nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest
+                                     + 0.5*((1 - len(local_explanation.perturbation.feature.positions_tokens.keys()) /
+                                            len(self.tokens)) + 0.001))
 
         for k in self.k_clusters:
+            # Find best K based on weighted nPIR (weighted by the size of the feature)
             #self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["weighted_nPIRs"])
-            self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["nPIRs"])
+            # Find best K based on normal nPIR
+            #self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["nPIRs"])
+            self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["percentage_nPIRs"])
 
         top_k = max(self.k_clusters, key=lambda k: self.k_clusters[k]["k_score"])
         return top_k, self.k_clusters[top_k]
@@ -576,7 +602,7 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         return clusters
 
     @staticmethod
-    def __k_score2(nPIRs):
+    def __k_score1(nPIRs):
         max_nPIR = max(nPIRs)
         min_nPIR = min(nPIRs)
         return max_nPIR - min_nPIR
@@ -597,4 +623,82 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         norm = np.linalg.norm(self.embedding_matrix)
         self.embedding_matrix = self.embedding_matrix / norm
         return
+
+
+class RandomFeaturesExtraction(FeaturesExtractionMethod):
+    """ Random Feature Extraction Class: Implementation of the FeaturesExtractionMethod Abstract Class.
+
+        The Random feature extraction method extracts random features
+    """
+    def __init__(self, raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, model_wrapper, flag_combinations):
+        # Execute constructor of the FeaturesExtractionMethod (Father Class)
+        FeaturesExtractionMethod.__init__(self, raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, model_wrapper, flag_combinations)
+        return
+
+    def extract_features(self):
+        self.feature_extraction_type = "RND"
+
+        # Read configuration file
+        config = self.__read_configuration_file()
+        max_ratio_words, min_words, stride, iterations_per_feature_size = config["max_ratio_words"], config["min_words"], config["stride"], config["iterations_per_feature_size"]
+
+        n_tokens = len(self.tokens)
+        max_n = int(max_ratio_words*n_tokens)
+
+        iterations_per_feature_size = min(iterations_per_feature_size, n_tokens)
+
+        features = []
+        feature_id = 0
+        # Extract one feature for each feature size
+        for n in range(min_words, max_n, stride):
+
+            for i in range(iterations_per_feature_size):
+
+                # generate n random indices between [0, n_tokens-1] without replacement
+                rnd_indices = random.sample(range(0, n_tokens), n)
+                rnd_indices = sorted(rnd_indices)
+
+                feature = self.fit_feature(feature_id,
+                                           rnd_indices,
+                                           n,
+                                           n_tokens,
+                                           1)
+                if feature is not None:
+                    features.append(feature)
+                    feature_id += 1
+
+        # if self.flag_combinations is True:
+        #    combination_features = self.combine_feature(features, 2, len(features), self.feature_extraction_type)
+        #    features = features + combination_features
+
+        return features
+
+    def fit_feature(self, feature_id, rnd_indices, n, n_tokens, combination):
+        positions_tokens = {idx:self.tokens[idx] for idx in rnd_indices}
+
+        if len(positions_tokens) > 0:
+            feature = Feature(feature_id,
+                              self.feature_extraction_type,
+                              self.create_description(feature_id, n, n_tokens),
+                              positions_tokens,
+                              combination)
+        else:
+            feature = None
+        return feature
+
+
+    @staticmethod
+    def create_description(feature_id, n, n_tokens):
+        return "Random feature {} with {}% of tokens".format(feature_id, int(n/n_tokens*100))
+
+    @staticmethod
+    def __read_configuration_file():
+        """ Read the random configuration file .
+
+        Returns:
+            config (dict): dictionary with rnd config
+        """
+        with open(os.path.join(utils.get_project_root(), 'config_files/rnd_configuration.yaml')) as file:
+            config = yaml.load(file, Loader=yaml.FullLoader)
+        return config
 

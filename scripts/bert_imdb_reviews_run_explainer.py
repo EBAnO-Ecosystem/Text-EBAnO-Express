@@ -1,11 +1,13 @@
-import explainer
-import bert_model_wrapper
+from model_wrappers import bert_model_wrapper
 import re
 import os
 import keras
 import tensorflow as tf
+import tensorflow_datasets as tfds
 import pandas as pd
 from official.nlp.bert import tokenization
+import explainer
+import time
 
 
 def cleaning_function_bert(text):
@@ -20,9 +22,6 @@ def cleaning_function_bert(text):
     text = text.replace("</br>", "")
     return text
 
-def load_dataset_from_csv(dataset_path):
-    df = pd.read_csv(dataset_path)
-    return df
 
 def load_model(model_directory):
     """Loads the fine-tuned model from directory.
@@ -46,37 +45,54 @@ def load_model(model_directory):
     return model, tokenizer, max_seq_length, extractor
 
 
+def load_imdb_dataset(train_slice, test_slice, as_supervised=False):
+    (train_data, test_data), info = tfds.load('imdb_reviews',
+                                              split=['train[{}]'.format(train_slice), 'test[{}]'.format(test_slice)],
+                                              as_supervised=as_supervised,
+                                              with_info=True
+                                              )
+
+    return train_data, test_data
+
+
+def load_dataset_from_csv(dataset_path):
+    df = pd.read_csv(dataset_path)
+    return df
+
+
 if __name__ == "__main__":
 
-    input_texts = ["You may fuck you think that azz!!!! abstract methods can't be implemented in the abstract base class. " 
-                 "This impression is wrong: An abstract method can have an implementation in the abstract class!" 
-                 " Even if they are implemented, designers of subclasses will be forced to override the implementation." 
-                 " Like in other cases of normal inheritance, the abstract method can be invoked with super() call mechanism. " 
-                 "This enables providing some basic functionality in the abstract method, which can be enriched by the subclass implementation."]
-
-    model_dir = "saved_models/fine_tuned/20201128_bert_model_ag_news_subset_exp0"
+    model_dir = "../saved_models/fine_tuned/20201117_bert_model_imdb_reviews_exp_0"
 
     model, tokenizer, max_seq_length, extractor = load_model(model_dir)
 
-    model_wrapper = bert_model_wrapper.BertModelWrapper(model, extractor, tokenizer, label_list=[0, 1, 2, 3], max_seq_len=max_seq_length, clean_function=cleaning_function_bert)
+    model_wrapper = bert_model_wrapper.BertModelWrapper(model, extractor, tokenizer, label_list=[0, 1], max_seq_len=max_seq_length, clean_function=cleaning_function_bert)
 
-    #texts = ['''Bush, Lawmakers Discuss Social Security (AP). AP - President Bush sought support from congressional ''']
 
-    #tokens = tokenizer.tokenize(texts[0])
-    #print("Tokens: {}".format(tokens))
-    #word_ids = tokenizer.convert_tokens_to_ids(tokens)
-    #print("Word Ids: {}".format(word_ids))
+    df = load_dataset_from_csv("../saved_models/fine_tuned/20201117_bert_model_imdb_reviews_exp_0/df_test.csv")
 
-    df = load_dataset_from_csv("saved_models/fine_tuned/20201128_bert_model_ag_news_subset_exp0/df_test.csv")
+    texts = df["text"][0:512].tolist()
+    true_labels = df["label"][0:512].tolist()
 
-    texts = df["text"][100:105].tolist()
-    true_labels = df["label"][100:105].tolist()
+    tokens = tokenizer.tokenize(texts[0])
+    print("Tokens: {}".format(tokens))
+    word_ids = tokenizer.convert_tokens_to_ids(tokens)
+    print("Word Ids: {}".format(word_ids))
+
+    #true_labels = None
+
 
     #embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
 
     #print(embeddings)
 
-    exp = explainer.LocalExplainer(model_wrapper, "20201128_bert_model_ag_news_subset_exp0")
+    #predictions = model_wrapper.predict(texts)
+
+    #print(predictions)
+
+    exp = explainer.LocalExplainer(model_wrapper, "20201117_bert_model_imdb_reviews_exp_0")
+
+    start_time = time.time()
 
     exp.fit_transform(input_texts=texts,
                       classes_of_interest=[-1]*len(texts),
@@ -84,8 +100,10 @@ if __name__ == "__main__":
                       flag_pos=True,
                       flag_sen=True,
                       flag_mlwe=True,
+                      flag_rnd=True,
                       flag_combinations=True)
 
-    #exp.fit(input_texts, [1])
+    print("Local Explainers takes {} seconds".format(time.time()-start_time))
+
 
 
