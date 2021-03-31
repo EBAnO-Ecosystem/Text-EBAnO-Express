@@ -1,6 +1,7 @@
 /saved_models/fine_tuned/*
 /saved_models/pre_trained/*
 /outputs/*
+/outputs/tmp/*
 .vscode
 
 # Byte-compiled / optimized / DLL files
