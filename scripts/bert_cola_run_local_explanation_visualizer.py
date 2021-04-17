@@ -14,8 +14,8 @@ LOCAL_EXPLANATIONS_FOLDER = os.path.join(utils.get_project_root(), OUTPUT_FOLDER
 
 if __name__ == "__main__":
 
-    LOCAL_EXPLANATION_EXPERIMENT_FOLDER = "20210303_120050"
-    LOCAL_EXPLANATION_REPORT_FILENAME = "local_explanation_report_24.json"
+    LOCAL_EXPLANATION_EXPERIMENT_FOLDER = "20210324_093236_analysis"
+    LOCAL_EXPLANATION_REPORT_FILENAME = "local_explanation_report_275.json"
 
     LOCAL_EXPLANATION_REPORT_PATH = os.path.join(LOCAL_EXPLANATIONS_FOLDER, LOCAL_EXPLANATION_EXPERIMENT_FOLDER,
                                                  "local_explanations", LOCAL_EXPLANATION_REPORT_FILENAME)

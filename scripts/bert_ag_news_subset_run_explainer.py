@@ -78,8 +78,8 @@ if __name__ == "__main__":
     #texts = df_test["text"][100:612].tolist()
     #true_labels = df_test["label"][100:612].tolist()
 
-    texts = df_test["text"][0:10].tolist()
-    true_labels = df_test["label"][0:10].tolist()
+    texts = df_test["text"][:512].tolist()
+    true_labels = df_test["label"][:512].tolist()
 
     #embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
 
@@ -93,11 +93,11 @@ if __name__ == "__main__":
     exp.fit_transform(input_texts=texts,
                       classes_of_interest=[-1]*len(texts),
                       expected_labels=true_labels,
-                      flag_pos=True,
-                      flag_sen=True,
-                      flag_mlwe=True,
-                      flag_rnd=False,
-                      flag_combinations=True)
+                      flag_pos=False,
+                      flag_sen=False,
+                      flag_mlwe=False,
+                      flag_rnd=True,
+                      flag_combinations=False)
 
     print("Local Explainers takes {} seconds".format(time.time()-start_time))
 

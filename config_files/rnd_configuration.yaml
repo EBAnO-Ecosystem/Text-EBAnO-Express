@@ -3,4 +3,4 @@
 max_ratio_words: 0.80 # w.r.t. the total number of words/tokens
 min_words: 1
 stride: 1
-iterations_per_feature_size: 3
+iterations_per_feature_size: 2

@@ -8,6 +8,12 @@ import tensorflow_datasets as tfds
 import pandas as pd
 from official.nlp.bert import tokenization
 from utils import utils
+import fastai
+from fastai.text import *
+from fastai.layers import *
+
+
+
 
 
 MODEL_DIR = os.path.join("saved_models", "fine_tuned")
@@ -64,8 +70,87 @@ def load_dataset_from_csv(dataset_path):
     df = pd.read_csv(dataset_path)
     return df
 
+def process_doc(learn, doc):
+    xb, yb = learn.data.one_item(doc)
+    return xb
+
+def encode_doc(learn, doc):
+    xb = process_doc(learn, doc)
+
+  # Reset initializes the hidden state
+    awd_lstm = learn.model[0]
+    awd_lstm.reset()
+    with torch.no_grad():
+        out = awd_lstm.eval()(xb)
+    # Return raw output, for last RNN, on last token in sequence
+    #return out[0][2][:].max(0).values.detach().numpy()
+    return out[0][2].numpy()
+
 
 if __name__ == "__main__":
+    #learn1 = torch.load("/Users/salvatore/PycharmProjects/T-EBAnO-Express/saved_models/fine_tuned/ulmfit_model_cola_exp0/learn1_file.pth")
+
+    #learn_model_dir = "/Users/salvatore/PycharmProjects/T-EBAnO-Express/saved_models/fine_tuned/ulmfit_model_cola_exp0/archive/data.pkl"
+
+    #learn = language_model_learner( pretrained_model=learn_model_dir, drop_mult=0.3)
+
+    #learn1 = load_learner(learn_model_dir)
+    learn1 = load_learner("/Users/salvatore/PycharmProjects/T-EBAnO-Express/saved_models/fine_tuned/ulmfit_model_cola_exp0/learn1/")
+
+    txt = "this is an example of input text"
+
+    help(learn1)
+
+    #learn1 = text_classifier_learner(data_clas, AWD_LSTM, drop_mult=0.3)
+    #learn1.load_encoder('AIBoot_enc')
+
+    print(type(learn1))
+
+    preds = learn1.predict(txt)
+
+    print(preds)
+
+    out_enc = encode_doc(learn1, txt)
+    out_enc1 = encode_doc(learn1, ["hello how are you","i am fine"])
+
+    print(out_enc[0][1])
+    print(out_enc1[0][1])
+
+    print(out_enc.shape)
+    print(out_enc1.shape)
+
+    tokenizer = SpacyTokenizer(lang="en")
+
+    print(len(tokenizer.tok(txt)))
+
+    model_wrapper = ulmfit_model_wrapper.ULMfitModelWrapper(label_list=LABEL_LIST,
+                                                            tokenizer=tokenizer,
+                                                            learn1=learn1)
+
+    texts = [txt]*5
+    predictions = model_wrapper.predict(texts)
+
+    print(predictions.shape)
+
+    df_test = load_dataset_from_csv(DF_TEST_PATH)
+
+    texts = df_test["sentence"][:512].tolist()
+    true_labels = df_test["label"][:512].tolist()
+
+    # Instantiate the LocalExplainer class for the current mdoel
+    exp = explainer.LocalExplainer(model_wrapper, model_name=USE_CASE_NAME)
+
+    exp.fit_transform(input_texts=texts,
+                      classes_of_interest=[-1] * len(texts),
+                      expected_labels=true_labels,
+                      flag_pos=True,
+                      flag_sen=True,
+                      flag_mlwe=True,
+                      flag_rnd=False,
+                      flag_combinations=True)
+
+
+    """
 
     model, tokenizer, max_seq_length, extractor = load_model(FINE_TUNED_MODEL_DIR)
 
@@ -96,6 +181,6 @@ if __name__ == "__main__":
                       flag_rnd=False,
                       flag_combinations=True)
 
-    # exp.fit(input_texts, [1])
+    # exp.fit(input_texts, [1])"""
 
 

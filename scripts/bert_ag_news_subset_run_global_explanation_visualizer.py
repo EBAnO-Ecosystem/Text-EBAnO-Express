@@ -18,8 +18,8 @@ if __name__ == "__main__":
     #global_explanation_report_path = "/Users/salvatore/PycharmProjects/T-EBAnO-Express/outputs/20201117_bert_model_imdb_reviews_exp_0/global_explanations_experiments"
     global_explanation_report_path = "/outputs/20201128_bert_model_ag_news_subset_exp0/global_explanations_experiments"
 
-    LOCAL_EXPLANATION_EXPERIMENT_FOLDER = "20210318_101319"
-    LOCAL_EXPLANATION_REPORT_FILENAME = "local_explanation_report_0.json"
+    LOCAL_EXPLANATION_EXPERIMENT_FOLDER = "20210318_204721_RND"
+    LOCAL_EXPLANATION_REPORT_FILENAME = "local_explanation_report_21.json"
 
     LOCAL_EXPLANATION_REPORT_PATH = os.path.join(LOCAL_EXPLANATIONS_FOLDER, LOCAL_EXPLANATION_EXPERIMENT_FOLDER,
                                                  "local_explanations", LOCAL_EXPLANATION_REPORT_FILENAME)

@@ -71,8 +71,8 @@ if __name__ == "__main__":
 
     df = load_dataset_from_csv("../saved_models/fine_tuned/20201117_bert_model_imdb_reviews_exp_0/df_test.csv")
 
-    texts = df["text"][0:512].tolist()
-    true_labels = df["label"][0:512].tolist()
+    texts = df["text"][400:448].tolist()
+    true_labels = df["label"][400:448].tolist()
 
     tokens = tokenizer.tokenize(texts[0])
     print("Tokens: {}".format(tokens))
@@ -97,11 +97,11 @@ if __name__ == "__main__":
     exp.fit_transform(input_texts=texts,
                       classes_of_interest=[-1]*len(texts),
                       expected_labels=true_labels,
-                      flag_pos=True,
-                      flag_sen=True,
-                      flag_mlwe=True,
+                      flag_pos=False,
+                      flag_sen=False,
+                      flag_mlwe=False,
                       flag_rnd=True,
-                      flag_combinations=True)
+                      flag_combinations=False)
 
     print("Local Explainers takes {} seconds".format(time.time()-start_time))
 

@@ -7,15 +7,16 @@ LABEL_LIST = [0, 1, 2, 3]
 LABEL_NAME_LIST = ["World", "Sport", "Business", "Sci/Tech"]
 
 OUTPUT_FOLDER = "outputs"
-USE_CASE_NAME = "albert_model_ag_news_subset_exp0"
+USE_CASE_NAME = "ulmfit_model_ag_news_subset_exp0"
 GLOBAL_EXPLANATIONS_FOLDER = os.path.join(utils.get_project_root(), OUTPUT_FOLDER, USE_CASE_NAME, "global_explanations_experiments")
 LOCAL_EXPLANATIONS_FOLDER = os.path.join(utils.get_project_root(), OUTPUT_FOLDER, USE_CASE_NAME, "local_explanations_experiments")
 
 
 if __name__ == "__main__":
 
-    LOCAL_EXPLANATION_EXPERIMENT_FOLDER = "20210324_114831_analysis"
-    LOCAL_EXPLANATION_REPORT_FILENAME = "local_explanation_report_500.json"
+    LOCAL_EXPLANATION_EXPERIMENT_FOLDER = "20210401_211157"
+    LOCAL_EXPLANATION_EXPERIMENT_FOLDER = "20210401_184745_analysis"
+    LOCAL_EXPLANATION_REPORT_FILENAME = "local_explanation_report_400.json"
 
     LOCAL_EXPLANATION_REPORT_PATH = os.path.join(LOCAL_EXPLANATIONS_FOLDER, LOCAL_EXPLANATION_EXPERIMENT_FOLDER,
                                                  "local_explanations", LOCAL_EXPLANATION_REPORT_FILENAME)
