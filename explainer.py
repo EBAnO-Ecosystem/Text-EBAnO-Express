@@ -3,7 +3,7 @@ import perturbation as pe
 import local_explanation as le
 from typing import List
 from nltk.stem import WordNetLemmatizer
-
+from utils import utils
 import yaml
 import os
 import time
@@ -81,7 +81,7 @@ class LocalExplainer:
         self.preprocessed_texts = self.model_wrapper.sequences_to_texts(self.sequences)  # List[str] list of texts by joining each sequence of tokens
         return
 
-    def transform(self, flag_pos: bool = True, flag_sen: bool = True, flag_mlwe: bool = True, flag_combinations: bool = True, output_folder: str = None):
+    def transform(self, flag_pos: bool = True, flag_sen: bool = True, flag_mlwe: bool = True, flag_rnd: bool = False, flag_combinations: bool = True, output_folder: str = None):
         """ Create a local explanation report for each input text passed in the fit method.
 
         For each text passed in the fit method, it perform the local explanation for the relative class of interest and
@@ -100,7 +100,7 @@ class LocalExplainer:
         self.__check_transform_parameters(flag_pos, flag_sen, flag_mlwe, flag_combinations)
 
         # Read configuration from configuration file
-        with open(r'config_files/config.yaml') as file:
+        with open(os.path.join(utils.get_project_root() ,'config_files/config.yaml')) as file:
             config = yaml.load(file, Loader=yaml.FullLoader)
 
         ts = time.time()
@@ -112,7 +112,7 @@ class LocalExplainer:
         # Extract embedding tensor of each input at once
         if flag_mlwe is True:
             print("INFO: Extracting embedding of all input texts.")
-            embedding_tensors = self.model_wrapper.extract_embedding(input_texts=self.cleaned_texts, batch_size=32)
+            embedding_tensors = self.model_wrapper.extract_embedding(input_texts=self.cleaned_texts, batch_size=512)
             print("INFO: Embedding extracted successfully.")
         else:
             embedding_tensors = [None]*len(self.raw_texts)  # If `flag_mlwe` is False, then the embedding is not needed
@@ -122,34 +122,39 @@ class LocalExplainer:
         for raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, embedding_tensor, expected_label, input_name in \
                 zip(self.raw_texts, self.cleaned_texts, self.preprocessed_texts, self.tokens_list, self.classes_of_interest, embedding_tensors, self.expected_labels, self.input_names):
 
-            print("INFO: Explaining text {}/{} ".format(input_id+1, len(self.raw_texts)))
-            self.__perform_local_explanation_single_input_text(input_id,  # Will fill the report id number
-                                                               raw_text,
-                                                               cleaned_text,
-                                                               preprocessed_text,
-                                                               tokens,
-                                                               class_of_interest,
-                                                               embedding_tensor,
-                                                               flag_pos, flag_sen, flag_mlwe, flag_combinations,
-                                                               local_explanations_folder,
-                                                               expected_label,
-                                                               input_name)
-            input_id += 1
+            try:
+                print("INFO: Explaining text {}/{} ".format(input_id+1, len(self.raw_texts)))
+                self.__perform_local_explanation_single_input_text(input_id,  # Will fill the report id number
+                                                                   raw_text,
+                                                                   cleaned_text,
+                                                                   preprocessed_text,
+                                                                   tokens,
+                                                                   class_of_interest,
+                                                                   embedding_tensor,
+                                                                   flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations,
+                                                                   local_explanations_folder,
+                                                                   expected_label,
+                                                                   input_name)
+                input_id += 1
+            except Exception as e:
+                print("Input Text {} Skipped...".format(input_id))
+                print(e)
+                input_id += 1
 
         return
 
-    def fit_transform(self, input_texts, classes_of_interest, expected_labels, flag_pos, flag_sen, flag_mlwe, flag_combinations):
+    def fit_transform(self, input_texts, classes_of_interest, expected_labels, flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations):
         """ Fits the explainer with input texts and perform transform methods to create the local explanation reports.
 
         """
         self.fit(input_texts, classes_of_interest, expected_labels)
 
-        self.transform(flag_pos, flag_sen, flag_mlwe, flag_combinations)
+        self.transform(flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations)
         return
 
     def __perform_local_explanation_single_input_text(self, input_id, raw_text, cleaned_text, preprocessed_text, tokens,
                                                       class_of_interest, embedding_tensor,
-                                                      flag_pos, flag_sen, flag_mlwe, flag_combinations, local_explanations_folder, expected_label, input_name):
+                                                      flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations, local_explanations_folder, expected_label, input_name):
         """ Performs and saves the local explanation for a single input text.
 
         Given a single input and a class of interest, it performs the explanation process:
@@ -172,6 +177,7 @@ class LocalExplainer:
                                                                    flag_pos=flag_pos,  # True if want apply POS feature extraction
                                                                    flag_sen=flag_sen,  # True if want apply SEN feature extraction
                                                                    flag_mlwe=flag_mlwe,  # True if want apply MLWE feature extraction
+                                                                   flag_rnd=flag_rnd,  # True if want apply RND feature extraction
                                                                    flag_combinations=flag_combinations)  # True for apply pairwise combination of features
 
         print("\tINFO: Feature Extraction Phase")
@@ -241,7 +247,7 @@ class LocalExplainer:
             print("INFO: Output folder: {} not exists, then it is created.".format(output_folder))
             os.mkdir(output_folder)
 
-        model_output_folder = os.path.join(output_folder, self.model_name)
+        model_output_folder = os.path.join(utils.get_project_root(), output_folder, self.model_name)
         if not os.path.isdir(model_output_folder):
             print("INFO: Output Model folder: {} not exists, then it is created inside {}.".format(model_output_folder, output_folder))
             os.makedirs(output_folder, exist_ok=True)

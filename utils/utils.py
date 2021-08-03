@@ -1,5 +1,10 @@
 import tensorflow as tf
 import pickle
+from pathlib import Path
+
+
+def get_project_root() -> Path:
+    return Path(__file__).parent.parent
 
 
 def load_saved_model(model_filepath):

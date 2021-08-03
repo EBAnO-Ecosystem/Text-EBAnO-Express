@@ -1,10 +1,11 @@
 import explainer
 from config_files import local_explanation_report_template
 import os
+from utils import utils
 
 def html_str_to_file(text, filename):
     """Write a file with the given name and the given text."""
-    output = open(os.path.join("outputs","tmp",filename), "w")
+    output = open(os.path.join(utils.get_project_root(), "outputs","tmp",filename), "w")
     output.write(text)
     output.close()
     return
@@ -13,7 +14,7 @@ def browseLocal(webpageText, filename='tempLocalExplanationReport.html'):
     """ Start your webbrowser on a local file containing the text with given filename. """
     import webbrowser, os.path
     html_str_to_file(webpageText, filename)
-    webbrowser.open("file:///" + os.path.abspath(os.path.join("outputs","tmp",filename)))
+    webbrowser.open("file:///" + os.path.abspath(os.path.join(utils.get_project_root(), "outputs","tmp",filename)))
     return
 
 
@@ -91,7 +92,7 @@ class LocalExplanationReportVisualizer:
 
         return html_string
 
-    def get_html_string_summary_feature_type(self, feature_type=any(["MLWE", "POS", "SEN"])):
+    def get_html_string_summary_feature_type(self, feature_type=any(["MLWE", "POS", "SEN","RND"])):
         # get features of `feature_type` without combinations
         filtered_local_explanations = self.local_explanation_report.get_filtered_local_explanations(feature_type, [1])
 
@@ -117,6 +118,7 @@ class LocalExplanationReportVisualizer:
         html_mlwe_summary = self.get_html_string_summary_feature_type("MLWE")
         html_pos_summary = self.get_html_string_summary_feature_type("POS")
         html_sen_summary = self.get_html_string_summary_feature_type("SEN")
+        html_rnd_summary = self.get_html_string_summary_feature_type("RND")
 
         html_mlwe_explanations = ""
         for l_e in sorted(self.local_explanation_report.get_filtered_local_explanations(feature_type_list="MLWE", combination_list=[1, 2]),
@@ -136,15 +138,23 @@ class LocalExplanationReportVisualizer:
                 current_exp = self.html_highlight_feature_into_text(self.local_explanation_report.positions_tokens, l_e)
                 html_sen_explanations = html_sen_explanations + "<hr>" + current_exp
 
+        html_rnd_explanations = ""
+        for l_e in sorted(self.local_explanation_report.get_filtered_local_explanations(feature_type_list="RND", combination_list=[1, 2]),
+                         key=lambda local_explanation: local_explanation.numerical_explanation.nPIR_original_top_class, reverse=True):
+                current_exp = self.html_highlight_feature_into_text(self.local_explanation_report.positions_tokens, l_e)
+                html_rnd_explanations = html_rnd_explanations + "<hr>" + current_exp
+
         contents = local_explanation_report_template.localExplanationReportTemplate.format(raw_text=self.local_explanation_report.raw_text,
                                                                                            clean_text=self.local_explanation_report.cleaned_text,
                                                                                            pre_text=self.local_explanation_report.preprocessed_text,
                                                                                            html_mlwe_summary=html_mlwe_summary,
                                                                                            html_pos_summary=html_pos_summary,
                                                                                            html_sen_summary=html_sen_summary,
+                                                                                           html_rnd_summary=html_rnd_summary,
                                                                                            mlwe_local_explanations=html_mlwe_explanations,
                                                                                            pos_local_explanations=html_pos_explanations,
                                                                                            sen_local_explanations=html_sen_explanations,
+                                                                                           rnd_local_explanations=html_rnd_explanations,
                                                                                            original_probabilities=[round(o_p,3) for o_p in self.local_explanation_report.original_probabilities],
                                                                                            original_label=self.local_explanation_report.original_label,
                                                                                            label_name=self.label_names[
@@ -166,25 +176,3 @@ class GlobalExplanationReportVisualizer:
     def fit(self, global_explanation_report):
         self.global_explanation_report = global_explanation_report
         return
-
-
-if __name__ == "__main__":
-
-    local_explanation_path = "outputs/20201117_bert_model_imdb_reviews_exp_0/local_explanations_experiments/" \
-                             "20201207_163011/local_explanations/local_explanation_report_1.json"
-    report = explainer.LocalExplanationReport()
-
-    report.fit_local_explanation_report_from_json_file(local_explanation_path)
-
-    report_visualizer = LocalExplanationReportVisualizer()
-
-    report_visualizer.fit(report)
-
-    report_visualizer.visualize_report_as_html()
-
-    #html_string = report_visualizer.get_html_string_summary_feature_type("MLWE")
-    #print(html_string)
-    #print(HTML('<h1>Multi-Layer Word Embedding Features Summary</h1>'))
-
-
-    #print(HTML(html_string))

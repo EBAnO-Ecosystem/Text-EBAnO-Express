@@ -87,6 +87,7 @@ localExplanationReportTemplate = '''
       <button class="tablinks" onclick="openFeatureType(event, 'MLWE')" id="defaultOpen">MLWE</button>
       <button class="tablinks" onclick="openFeatureType(event, 'POS')">POS</button>
       <button class="tablinks" onclick="openFeatureType(event, 'SEN')">SEN</button>
+      <button class="tablinks" onclick="openFeatureType(event, 'RND')">RND</button>
     </div>
     
     <!-- Tab content -->
@@ -178,6 +179,36 @@ localExplanationReportTemplate = '''
       <hr>
       <h1>SEN Ordered Features</h1>
       <div>{sen_local_explanations}</div>
+    </div>
+    
+    <div id="RND" class="tabcontent">
+      <h1>INPUT INFO</h1>
+      <h3>Original Raw Text</h3>
+      <div class="boxed">{raw_text}</div>
+      <h3>Original Cleaned Text</h3>
+      <div class="boxed">{clean_text}</div>
+      <h3>Original Preprocessed Text</h3>
+      <div class="boxed">{pre_text}</div>
+      <div id="input_info">
+      <table id="table_input">
+          <tr>
+            <th>Original Probabilities</th>
+            <th>Original Label</th>
+            <th>Label Name</th>
+          </tr>
+          <tr>
+            <th>{original_probabilities}</th>
+            <th>{original_label}</th>
+            <th>{label_name}</th>
+          </tr>
+      </table>
+    </div>
+      <hr>
+      <h1>RND Summary</h1>
+      <div class="boxed">{html_rnd_summary}</div>
+      <hr>
+      <h1>RND Ordered Features</h1>
+      <div>{rnd_local_explanations}</div>
     </div>
 
 <script>
