@@ -78,8 +78,8 @@ if __name__ == "__main__":
     #texts = df_test["text"][100:612].tolist()
     #true_labels = df_test["label"][100:612].tolist()
 
-    texts = df_test["text"][:512].tolist()
-    true_labels = df_test["label"][:512].tolist()
+    texts = df_test["text"][:1].tolist()
+    true_labels = df_test["label"][:1].tolist()
 
     #embeddings = model_wrapper.extract_embedding(input_texts=texts, batch_size=32)
 

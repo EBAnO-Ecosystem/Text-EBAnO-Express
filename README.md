@@ -1,5 +1,9 @@
 <h1>T-EBAnO - Text-Explaining BlAck-box mOdels</h1>
 
+<p align="center">
+    <img src="img/logo.png" alt="EBANO-logo" style="width:200px;"/>
+</p>
+
 Explaining predictions of deep learning models for Natural Language Processing tasks.
 * Local Explanations
 * Global Explanations
