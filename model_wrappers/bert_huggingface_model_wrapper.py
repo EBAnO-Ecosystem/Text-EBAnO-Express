@@ -5,20 +5,6 @@ import model_wrapper_interface
 import numpy as np
 from transformers import AutoModelForSequenceClassification,AutoTokenizer,BertConfig
 
-
-def clean_text(text):
-    #return toxic_clean_function.preprocess(text)
-    text = re.sub("@\S+", " ", text) # Remove Mentions
-    text = re.sub("https*\S+", " ", text) # Remove URL
-    text = re.sub("#\S+", " ", text) # Remove Hastags
-    text = re.sub('&lt;/?[a-z]+&gt;', '', text) # Remove special Charaters
-    text = re.sub('#39', ' ', text) # Remove special Charaters
-    text = re.sub('<.*?>', '', text) # Remove html
-    text = re.sub(' +', ' ', text) # Merge multiple blank spaces
-    text = text.replace("<br>", "")
-    text = text.replace("</br>", "")
-    return text
-
 def getModelFromDir(path):
     config = BertConfig.from_pretrained(path, output_hidden_states=True)
     model = AutoModelForSequenceClassification.from_pretrained(path, config=config)
@@ -26,17 +12,24 @@ def getModelFromDir(path):
 
     return model, tokenizer
 
+
 class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
-    def __init__(self, path, batch_size=8):
+    def __init__(self, path, clean_function=None, max_seq_length=256, batch_size=8):
         model, tokenizer = getModelFromDir(path)
         self.model = model
         self.tokenizer = tokenizer
         self.label_list = list(range(model.num_labels))
-        self.max_seq_length = 256
-        self.clean_function = clean_text
+        self.max_seq_length = max_seq_length
+        if clean_function is None:
+            self.clean_function = self.clean_function
+        else:
+            self.clean_function = clean_function
         self.max_wordpieces = self.max_seq_length
         self.batch_size = batch_size
         return
+
+    def empty_clean_fn(self, text):
+        return text
 
     def predictSingleBatch(self,text):
         inputs = self.tokenizer(text,padding=True, truncation=True, return_tensors="pt",max_length=256)
@@ -49,7 +42,7 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
 
     def predict(self, input_texts: List[str]) -> list:
         if isinstance(input_texts, str):
-            return self.predictSingleBatch(clean_text(input_texts))
+            return self.predictSingleBatch(self.clean_function(input_texts))
         input_texts = list(map(self.clean_function,input_texts))
         result = np.empty((len(input_texts), len(self.label_list)), dtype="float32")
         i = 0
