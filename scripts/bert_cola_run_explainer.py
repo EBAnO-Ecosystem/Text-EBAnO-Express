@@ -1,5 +1,5 @@
 import explainer
-from model_wrappers import bert_model_wrapper
+from model_wrappers import bert_tensorflow_model_wrapper
 import re
 import os
 import keras
@@ -69,7 +69,7 @@ if __name__ == "__main__":
 
     model, tokenizer, max_seq_length, extractor = load_model(FINE_TUNED_MODEL_DIR)
 
-    model_wrapper = bert_model_wrapper.BertModelWrapper(model, extractor, tokenizer,
+    model_wrapper = bert_tensorflow_model_wrapper.BertTensorFlowModelWrapper(model, extractor, tokenizer,
                                                         label_list=LABEL_LIST,
                                                         max_seq_len=MAX_SEQ_LENGTH,
                                                         clean_function=cleaning_function_bert,

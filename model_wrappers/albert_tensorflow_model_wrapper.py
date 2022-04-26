@@ -8,7 +8,7 @@ import numpy as np
 import re
 
 
-class AlbertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
+class AlbertTensorFlowModelWrapper(model_wrapper_interface.ModelWrapperInterface):
     def __init__(self, albert_model, extractor, tokenizer, label_list, max_seq_len, clean_function, embedding_dimension=768, from_logits=False):
         self.model = albert_model
         self.extractor = extractor

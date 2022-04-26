@@ -1,5 +1,5 @@
 import explainer
-from model_wrappers import albert_model_wrapper
+from model_wrappers import albert_tensorflow_model_wrapper
 import re
 import os
 import keras
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     model, tokenizer, extractor = load_model(FINE_TUNED_MODEL_DIR)
 
 
-    model_wrapper = albert_model_wrapper.AlbertModelWrapper(model, extractor, tokenizer, label_list=LABEL_LIST, max_seq_len=MAX_SEQ_LENGTH, clean_function=cleaning_function_bert)
+    model_wrapper = albert_tensorflow_model_wrapper.AlbertTensorFlowModelWrapper(model, extractor, tokenizer, label_list=LABEL_LIST, max_seq_len=MAX_SEQ_LENGTH, clean_function=cleaning_function_bert)
 
     df_test = load_dataset_from_csv(DF_TEST_PATH)
 

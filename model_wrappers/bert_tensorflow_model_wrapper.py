@@ -8,7 +8,7 @@ import numpy as np
 import re
 
 
-class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
+class BertTensorFlowModelWrapper(model_wrapper_interface.ModelWrapperInterface):
     def __init__(self, bert_model, extractor, tokenizer, label_list, max_seq_len, clean_function, from_logits=False):
         self.model = bert_model
         self.extractor = extractor

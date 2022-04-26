@@ -1,4 +1,4 @@
-from model_wrappers import bert_model_wrapper
+from model_wrappers import bert_tensorflow_model_wrapper
 import re
 import os
 import keras
@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     model, tokenizer, max_seq_length, extractor = load_model(model_dir)
 
-    model_wrapper = bert_model_wrapper.BertModelWrapper(model, extractor, tokenizer, label_list=[0, 1], max_seq_len=max_seq_length, clean_function=cleaning_function_bert)
+    model_wrapper = bert_tensorflow_model_wrapper.BertTensorFlowModelWrapper(model, extractor, tokenizer, label_list=[0, 1], max_seq_len=max_seq_length, clean_function=cleaning_function_bert)
 
 
     df = load_dataset_from_csv("../saved_models/fine_tuned/20201117_bert_model_imdb_reviews_exp_0/df_test.csv")

@@ -1,5 +1,5 @@
 import explainer
-from model_wrappers import albert_model_wrapper
+from model_wrappers import albert_tensorflow_model_wrapper
 import re
 import os
 import keras
