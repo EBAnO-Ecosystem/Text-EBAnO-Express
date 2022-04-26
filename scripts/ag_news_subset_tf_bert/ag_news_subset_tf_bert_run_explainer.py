@@ -93,9 +93,9 @@ if __name__ == "__main__":
     exp.fit_transform(input_texts=texts,
                       classes_of_interest=[-1]*len(texts),
                       expected_labels=true_labels,
-                      flag_pos=False,
-                      flag_sen=False,
-                      flag_mlwe=False,
+                      flag_pos=True,
+                      flag_sen=True,
+                      flag_mlwe=True,
                       flag_rnd=True,
                       flag_combinations=False)
 

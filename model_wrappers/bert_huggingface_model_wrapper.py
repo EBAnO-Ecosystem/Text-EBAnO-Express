@@ -3,19 +3,10 @@ from typing import List
 
 import model_wrapper_interface
 import numpy as np
-from transformers import AutoModelForSequenceClassification,AutoTokenizer,BertConfig
-
-def getModelFromDir(path):
-    config = BertConfig.from_pretrained(path, output_hidden_states=True)
-    model = AutoModelForSequenceClassification.from_pretrained(path, config=config)
-    tokenizer = AutoTokenizer.from_pretrained("bert-base-cased")
-
-    return model, tokenizer
 
 
 class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
-    def __init__(self, path, clean_function=None, max_seq_length=256, batch_size=8):
-        model, tokenizer = getModelFromDir(path)
+    def __init__(self, model, tokenizer, clean_function=None, max_seq_length=256, batch_size=8):
         self.model = model
         self.tokenizer = tokenizer
         self.label_list = list(range(model.num_labels))
