@@ -23,3 +23,9 @@ kmeans:
   normalization: True
 
 
+
+feature_informative_score:
+  alpha: 0.60
+  beta: 0.40
+
+

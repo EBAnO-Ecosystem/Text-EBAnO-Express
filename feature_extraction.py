@@ -549,42 +549,36 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
 
     def __search_most_informative_k_division(self, local_explanations_mlwe):
         """ Evaluates each k division and finds the most informative one. """
+
+        fis_alpha = self.config["feature_informative_score"]["alpha"]
+        fis_beta = self.config["feature_informative_score"]["beta"]
+
         for local_explanation in local_explanations_mlwe:
             k = local_explanation.perturbation.feature.k
 
             if k not in self.k_clusters:
                 self.k_clusters[k] = {"features": [local_explanation.perturbation.feature],
+                                      "nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest],
                                       "weighted_nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest
                                                          / 0.001+math.log(len(local_explanation.perturbation.feature.positions_tokens.keys()))],
-                                      "percentage_nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest
-                                                         + 0.5*((1-len(local_explanation.perturbation.feature.positions_tokens.keys())/ len(self.tokens)) + 0.001) ],
-                                      "nPIRs": [local_explanation.numerical_explanation.nPIR_class_of_interest],
+                                      "feature_informative_score": [fis_alpha*local_explanation.numerical_explanation.nPIR_class_of_interest
+                                                         + fis_beta*((1-len(local_explanation.perturbation.feature.positions_tokens.keys())/ len(self.tokens)) + 0.001) ],
                                       "k": k}
             else:
                 self.k_clusters[k]["features"].append(local_explanation.perturbation.feature)
                 self.k_clusters[k]["nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest)
                 self.k_clusters[k]["weighted_nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest
                                                             / 0.001+math.log(len(local_explanation.perturbation.feature.positions_tokens.keys()) ))
-                self.k_clusters[k]["percentage_nPIRs"].append(local_explanation.numerical_explanation.nPIR_class_of_interest
-                                     + 0.5*((1 - len(local_explanation.perturbation.feature.positions_tokens.keys()) /
+                self.k_clusters[k]["feature_informative_score"].append(fis_alpha*local_explanation.numerical_explanation.nPIR_class_of_interest
+                                     + fis_beta*((1 - len(local_explanation.perturbation.feature.positions_tokens.keys()) /
                                             len(self.tokens)) + 0.001))
 
         for k in self.k_clusters:
-            # Find best K based on weighted nPIR (weighted by the size of the feature)
-            #self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["weighted_nPIRs"])
-            # Find best K based on normal nPIR
-            #self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["nPIRs"])
-            self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["percentage_nPIRs"])
+            # Find best K based on feature informative score (FIS) score
+            self.k_clusters[k]["k_score"] = self.__k_score(self.k_clusters[k]["feature_informative_score"])
 
         top_k = max(self.k_clusters, key=lambda k: self.k_clusters[k]["k_score"])
         return top_k, self.k_clusters[top_k]
-
-   # TODO: write better k evaluation
-   # def __k_evaluation(self, evaluation_mode):
-   #     if evaluation_mode == "FIS":
-   #         k_score =
-   #     elif evaluation_mode == "ARMONIC_MEAN":
-   #     return
 
     def __apply_kmeans(self, k):
         """ Applies K-Means algorithm with the specified K over the tokens and the embedding matrix.
