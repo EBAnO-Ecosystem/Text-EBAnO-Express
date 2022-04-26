@@ -3,6 +3,10 @@
 clustering_alg: kmeans
 
 
+
+
+
+
 #kmeans:
 #  max_iterations: 1000
 #  n_init: 150
@@ -17,3 +21,5 @@ kmeans:
   init_type: "random"
   standardization: True
   normalization: True
+
+

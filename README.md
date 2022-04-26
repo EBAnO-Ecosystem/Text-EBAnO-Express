@@ -5,8 +5,13 @@
 </p>
 
 Explaining predictions of deep learning models for Natural Language Processing tasks.
-* Local Explanations
-* Global Explanations
+
+T-EBAnO is a domain and model specific XAI technique for deep models in the NLP domain.
+* **Local Explanations**: explain single predictions of the model.
+* **Global Explanations**: aggregate multiple local explanations to globally explain the model.
+
+The methodology is **model-specific**, thus it requires to implement the `model_wrapper_interface` to adapt for your specific model. 
+Some examples of interface implementations could be found in the `model_wrappers` folder.
 
 <h2>Survey nPIR correlation</h2>
 

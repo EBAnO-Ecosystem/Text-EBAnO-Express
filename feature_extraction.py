@@ -579,6 +579,13 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         top_k = max(self.k_clusters, key=lambda k: self.k_clusters[k]["k_score"])
         return top_k, self.k_clusters[top_k]
 
+   # TODO: write better k evaluation
+   # def __k_evaluation(self, evaluation_mode):
+   #     if evaluation_mode == "FIS":
+   #         k_score =
+   #     elif evaluation_mode == "ARMONIC_MEAN":
+   #     return
+
     def __apply_kmeans(self, k):
         """ Applies K-Means algorithm with the specified K over the tokens and the embedding matrix.
 
