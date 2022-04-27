@@ -545,7 +545,11 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
             k_max (int): Max value for K
         """
         #return int(math.sqrt(len(self.tokens) + 1))
-        return len(self.tokens)
+        #return len(self.tokens)
+        if int(math.sqrt(len(self.tokens))) < 10:
+            return 10
+        else:
+            return int(math.sqrt(len(self.tokens)) + 1)
 
     def __search_most_informative_k_division(self, local_explanations_mlwe):
         """ Evaluates each k division and finds the most informative one. """

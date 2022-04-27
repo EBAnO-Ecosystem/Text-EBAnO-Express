@@ -243,6 +243,8 @@ class LocalExplainer:
         if output_folder is None:
             output_folder = config["output_folder"]
 
+
+        output_folder = os.path.join(utils.get_project_root(), output_folder)
         if not os.path.isdir(output_folder):
             print("INFO: Output folder: {} not exists, then it is created.".format(output_folder))
             os.mkdir(output_folder)
