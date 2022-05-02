@@ -11,16 +11,17 @@ import datetime
 import json
 
 
-class LocalExplainer:
-    """ Local Explainer Class.
 
-        Performs a set of local explanations for a given Black-Box model and a set of input texts.
+class LocalExplainer:
+    """ Offline Local Explainer Class.
+
+        Performs a set of local explanations for a given Black-Box model and a set of input texts and saves persistenly on disk as LocalExplanationReport json.
 
          Attributes:
             model_wrapper (:obj:ModelWrapperInterface)  Instance of a real class implementing the ModelWrapperInterface
             model_name
         """
-    def __init__(self, model_wrapper, model_name):
+    def __init__(self, model_wrapper, model_name, flag_offline_mode=False):
         # Instantiate the model wrapper
         self.model_wrapper = model_wrapper
         self.model_name = model_name
@@ -36,6 +37,8 @@ class LocalExplainer:
         self.index_word = None
         self.expected_labels = None
         self.input_names = None
+
+        self.flag_offline_mode = flag_offline_mode
 
     def fit(self, input_texts:  List[str], classes_of_interest: List[int], expected_labels: List[int] = None, input_names: List[any] = None):
         """ Fits the explainer with a list of input texts to be explained.
@@ -81,7 +84,7 @@ class LocalExplainer:
         self.preprocessed_texts = self.model_wrapper.sequences_to_texts(self.sequences)  # List[str] list of texts by joining each sequence of tokens
         return
 
-    def transform(self, flag_pos: bool = True, flag_sen: bool = True, flag_mlwe: bool = True, flag_rnd: bool = False, flag_combinations: bool = True, output_folder: str = None):
+    def transform(self, flag_pos: bool = True, flag_sen: bool = True, flag_mlwe: bool = True, flag_rnd: bool = False, flag_combinations: bool = True, flag_offline_mode: bool = False, output_folder: str = None):
         """ Create a local explanation report for each input text passed in the fit method.
 
         For each text passed in the fit method, it perform the local explanation for the relative class of interest and
@@ -97,7 +100,9 @@ class LocalExplainer:
         Raises:
             ValueError: (flag_pos or flag_sen or flag_mlwe o flag_combinations) is not bool
         """
-        self.__check_transform_parameters(flag_pos, flag_sen, flag_mlwe, flag_combinations)
+        self.__check_transform_parameters(flag_pos, flag_sen, flag_mlwe, flag_combinations, flag_offline_mode)
+
+        self.flag_offline_mode = flag_offline_mode
 
         # Read configuration from configuration file
         with open(os.path.join(utils.get_project_root() ,'config_files/config.yaml')) as file:
@@ -106,8 +111,13 @@ class LocalExplainer:
         ts = time.time()
         timestamp = datetime.datetime.fromtimestamp(ts).strftime('%Y%m%d_%H%M%S')
 
-        # Create the output folders
-        base_experiment_folder, local_explanations_folder = self.__prepare_output_folder(output_folder, config, timestamp)
+        # If offline mode, create the output folders
+        if self.flag_offline_mode:
+            # Create the output folders
+            base_experiment_folder, local_explanations_folder = self.__prepare_output_folder(output_folder, config, timestamp)
+        else:
+            base_experiment_folder = None
+            local_explanations_folder = None
 
         # Extract embedding tensor of each input at once
         if flag_mlwe is True:
@@ -117,6 +127,8 @@ class LocalExplainer:
         else:
             embedding_tensors = [None]*len(self.raw_texts)  # If `flag_mlwe` is False, then the embedding is not needed
 
+        local_explanation_reports = []
+
         input_id = 0
         # Loop over each input text to perform the explanation
         for raw_text, cleaned_text, preprocessed_text, tokens, class_of_interest, embedding_tensor, expected_label, input_name in \
@@ -124,33 +136,35 @@ class LocalExplainer:
 
             try:
                 print("INFO: Explaining text {}/{} ".format(input_id+1, len(self.raw_texts)))
-                self.__perform_local_explanation_single_input_text(input_id,  # Will fill the report id number
-                                                                   raw_text,
-                                                                   cleaned_text,
-                                                                   preprocessed_text,
-                                                                   tokens,
-                                                                   class_of_interest,
-                                                                   embedding_tensor,
-                                                                   flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations,
-                                                                   local_explanations_folder,
-                                                                   expected_label,
-                                                                   input_name)
+                local_explanation_report = self.__perform_local_explanation_single_input_text(input_id,  # Will fill the report id number
+                                                                                               raw_text,
+                                                                                               cleaned_text,
+                                                                                               preprocessed_text,
+                                                                                               tokens,
+                                                                                               class_of_interest,
+                                                                                               embedding_tensor,
+                                                                                               flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations,
+                                                                                               local_explanations_folder,
+                                                                                               expected_label,
+                                                                                               input_name)
+                local_explanation_reports.append(local_explanation_report)
                 input_id += 1
             except Exception as e:
                 print("Input Text {} Skipped...".format(input_id))
                 print(e)
                 input_id += 1
 
-        return
+        return local_explanation_reports
 
-    def fit_transform(self, input_texts, classes_of_interest, expected_labels, flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations):
+    def fit_transform(self, input_texts, classes_of_interest, expected_labels, flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations, flag_offline_mode):
         """ Fits the explainer with input texts and perform transform methods to create the local explanation reports.
 
         """
         self.fit(input_texts, classes_of_interest, expected_labels)
 
-        self.transform(flag_pos, flag_sen, flag_mlwe, flag_rnd, flag_combinations)
-        return
+        local_explanation_reports = self.transform(flag_pos=flag_pos, flag_sen=flag_sen, flag_mlwe=flag_mlwe, flag_rnd=flag_rnd,
+                                                   flag_combinations=flag_combinations, flag_offline_mode=flag_offline_mode)
+        return local_explanation_reports
 
     def __perform_local_explanation_single_input_text(self, input_id, raw_text, cleaned_text, preprocessed_text, tokens,
                                                       class_of_interest, embedding_tensor,
@@ -232,10 +246,11 @@ class LocalExplainer:
                                      flag_pos, flag_sen, flag_mlwe, flag_combinations,
                                      local_explanations)
 
-        # Save the LocalExplanationReport as json on disk in the LocalExplanationReport
-        local_explanation_report.save_local_explanation_report(local_explanations_folder, input_name)
+        if self.flag_offline_mode:
+            # Save the LocalExplanationReport as json on disk in the LocalExplanationReport
+            local_explanation_report.save_local_explanation_report(local_explanations_folder, input_name)
 
-        return
+        return local_explanation_report
 
     def __prepare_output_folder(self, output_folder, config, timestamp):
         """ Creates the tree output where save each explanation report.  """
@@ -302,7 +317,7 @@ class LocalExplainer:
         return
 
     @staticmethod
-    def __check_transform_parameters(flag_pos, flag_sen, flag_mlwe, flag_combinations):
+    def __check_transform_parameters(flag_pos, flag_sen, flag_mlwe, flag_combinations, flag_offline_mode):
         """ Checks parameters of transform method.  """
         if not isinstance(flag_pos, bool):
             raise ValueError("The optional parameter 'flag_pos' must be of type: boolean")
@@ -310,6 +325,8 @@ class LocalExplainer:
             raise ValueError("The optional parameter 'flag_sen' must be of type: boolean")
         if not isinstance(flag_mlwe, bool):
             raise ValueError("The optional parameter 'flag_mlwe' must be of type: boolean")
+        if not isinstance(flag_offline_mode, bool):
+            raise ValueError("The optional parameter 'flag_offline_mode' must be of type: boolean")
         if not isinstance(flag_combinations, bool):
             raise ValueError("The optional parameter 'flag_combinations' must be of type: boolean")
         return

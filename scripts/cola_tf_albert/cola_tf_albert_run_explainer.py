@@ -78,7 +78,7 @@ def load_dataset_from_csv(dataset_path):
 if __name__ == "__main__":
     model, tokenizer, extractor = load_model(FINE_TUNED_MODEL_DIR)
 
-    model_wrapper = albert_model_wrapper.AlbertModelWrapper(model, extractor, tokenizer, label_list=LABEL_LIST,
+    model_wrapper = albert_tensorflow_model_wrapper.AlbertModelWrapper(model, extractor, tokenizer, label_list=LABEL_LIST,
                                                             max_seq_len=MAX_SEQ_LENGTH,
                                                             clean_function=cleaning_function_bert,
                                                             from_logits=True)
