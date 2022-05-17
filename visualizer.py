@@ -18,6 +18,13 @@ def browseLocal(webpageText, filename='tempLocalExplanationReport.html'):
     return
 
 
+class LocalExplanationVisualizer:
+    def __init__(self, local_explanation, label_names):
+        self.local_explanation = local_explanation
+        self.label_names = label_names
+        return
+
+
 class LocalExplanationReportVisualizer:
     def __init__(self):
         self.local_explanation_report = None
