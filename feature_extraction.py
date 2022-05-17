@@ -1,11 +1,11 @@
-import perturbation as pe
-import local_explanation as le
+from . import perturbation as pe
+from . import local_explanation as le
 from abc import ABC, abstractmethod
 from typing import List
 from itertools import combinations
 from sklearn.cluster import KMeans
 import os
-from utils import utils
+from .utils import utils
 import numpy as np
 import nltk
 import yaml

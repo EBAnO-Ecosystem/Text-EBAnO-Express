@@ -1,7 +1,6 @@
-import explainer
-from config_files import local_explanation_report_template
+from .config_files import local_explanation_report_template
 import os
-from utils import utils
+from .utils import utils
 
 def html_str_to_file(text, filename):
     """Write a file with the given name and the given text."""

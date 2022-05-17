@@ -1,6 +1,6 @@
-import perturbation as pe
-import feature_extraction as fe
-import perturbation_scores
+from . import perturbation as pe
+from . import feature_extraction as fe
+from . import perturbation_scores
 import numpy as np
 
 

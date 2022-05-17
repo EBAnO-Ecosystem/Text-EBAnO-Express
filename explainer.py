@@ -1,9 +1,9 @@
-import feature_extraction as fe
-import perturbation as pe
-import local_explanation as le
+from . import feature_extraction as fe
+from . import perturbation as pe
+from . import local_explanation as le
 from typing import List
 from nltk.stem import WordNetLemmatizer
-from utils import utils
+from .utils import utils
 import yaml
 import os
 import time

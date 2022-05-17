@@ -1,8 +1,5 @@
 from abc import ABC, abstractmethod
 from typing import List
-
-from keras.preprocessing.text import text_to_word_sequence
-import nltk
 import re
 
 
