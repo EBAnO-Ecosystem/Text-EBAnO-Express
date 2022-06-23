@@ -12,6 +12,20 @@ T-EBAnO is a domain and model specific XAI technique for deep models in the NLP 
 
 The methodology is **model-specific**, thus it requires to implement the `model_wrapper_interface` to adapt for your specific model. 
 Some examples of interface implementations could be found in the `model_wrappers` folder.
+---
+## Citation
+```
+@article{Ventura2022,
+  doi = {10.1007/s10115-022-01690-9},
+  url = {https://doi.org/10.1007/s10115-022-01690-9},
+  year = {2022},
+  month = jun,
+  publisher = {Springer Science and Business Media {LLC}},
+  author = {Francesco Ventura and Salvatore Greco and Daniele Apiletti and Tania Cerquitelli},
+  title = {Trusting deep learning natural-language models via local and global explanations},
+  journal = {Knowledge and Information Systems}
+}
+```
 
 ---
 ## Explainers
@@ -51,3 +65,5 @@ Pf: probability after the perturbation of the feature f for the class ci
 ## Human Evaluation
 - **Survey nPIR correlation with human-judgment**: Link to the <a href="https://docs.google.com/forms/d/e/1FAIpQLSfv6XT0tEjYzVBXJKZSj7RgCIZaEX8NHYbsB8vrTkbMGp-P1w/viewform" target="_blank">Survey</a>
 ---
+
+
