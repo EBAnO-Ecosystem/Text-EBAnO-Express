@@ -1,7 +1,7 @@
 import re
 from typing import List
 
-import model_wrapper_interface
+from .. import model_wrapper_interface
 import numpy as np
 
 
