@@ -546,10 +546,15 @@ class KMeansEmbeddingUnsupervisedAnalysis(EmbeddingUnsupervisedAnalysis):
         """
         #return int(math.sqrt(len(self.tokens) + 1))
         #return len(self.tokens)
-        if int(math.sqrt(len(self.tokens))) < 10:
-            return 10
+        if len(self.tokens) <= 25:
+            return len(self.tokens)-1
         else:
-            return int(math.sqrt(len(self.tokens)) + 1)
+            return min(25 + int(math.sqrt(len(self.tokens))), len(self.tokens)-1)
+        
+        #if int(math.sqrt(len(self.tokens))) < 50:
+        #    return 10
+        #else:
+        #    return int(math.sqrt(len(self.tokens)) + 1)
 
     def __search_most_informative_k_division(self, local_explanations_mlwe):
         """ Evaluates each k division and finds the most informative one. """
