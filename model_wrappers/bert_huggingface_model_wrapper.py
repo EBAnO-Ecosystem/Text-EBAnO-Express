@@ -3,11 +3,16 @@ from typing import List
 
 from .. import model_wrapper_interface
 import numpy as np
+import torch
 
 
 class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
-    def __init__(self, model, tokenizer, clean_function=None, max_seq_length=256, batch_size=8):
+    def __init__(self, model, tokenizer, clean_function=None, max_seq_length=128, batch_size=8):
         self.model = model
+        
+        #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        #self.model.to(device)
+        
         self.tokenizer = tokenizer
         self.label_list = list(range(model.num_labels))
         self.max_seq_length = max_seq_length
@@ -23,10 +28,13 @@ class BertModelWrapper(model_wrapper_interface.ModelWrapperInterface):
         return text
 
     def predictSingleBatch(self,text):
-        inputs = self.tokenizer(text,padding=True, truncation=True, return_tensors="pt",max_length=256)
+        inputs = self.tokenizer(text,padding=True, truncation=True, return_tensors="pt",max_length=128)
+        #device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        device = "cpu"
+        inputs.to(device)
         outputs = self.model(**inputs)
         probs = outputs[0].softmax(1)
-        return np.array(probs.detach())
+        return np.array(probs.detach().to("cpu"))
 
     def get_label_list(self):
         return self.label_list
